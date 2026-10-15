@@ -42,7 +42,7 @@ type livePrefetchStreamer struct {
 }
 
 func newLivePrefetchStreamer(src beep.Streamer, sampleRate beep.SampleRate) *livePrefetchStreamer {
-	capacity := max(sampleRate.N(livePrefetchBufferDuration), 1)
+	capacity := max(sampleRate.N(max(livePrefetchBufferDuration, time.Duration(networkBuffer.Load()))), 1)
 	resumeAt := min(max(sampleRate.N(livePrefetchResumeDuration), 1), capacity)
 	p := &livePrefetchStreamer{
 		src:        src,
@@ -68,7 +68,11 @@ func (p *livePrefetchStreamer) fill() {
 			return
 		}
 
+		start := time.Now()
 		n, ok := p.src.Stream(chunk)
+		if n > 0 {
+			recordNetworkSpeed(p.sampleRate.D(n), time.Since(start))
+		}
 		if n > 0 && !p.write(chunk[:n]) {
 			return
 		}

@@ -191,7 +191,7 @@ func (m *Model) handleV2Request(msg V2RequestMsg) tea.Cmd {
 		m.saveSpeed()
 		m.completeV2Job(msg.Jobs, msg.JobID, ipc.Response{OK: true, Speed: m.player.Speed()})
 		return nil
-	case "queue", "track.play", "track.queue", "queue.play", "queue.enqueue", "queue.remove", "queue.move", "queue.clear", "queue.list":
+	case "queue", "tracks.add", "track.play", "track.queue", "queue.play", "queue.enqueue", "queue.remove", "queue.move", "queue.clear", "queue.list":
 		return m.handleV2QueueRequest(ctx, msg.Jobs, msg.JobID, request)
 	case "playnext.list", "playnext.remove", "playnext.move", "playnext.clear":
 		return m.handleV2PlayNext(msg.Jobs, msg.JobID, request)
@@ -207,6 +207,15 @@ func (m *Model) handleV2Request(msg V2RequestMsg) tea.Cmd {
 		return m.handleV2Mode(msg.Jobs, msg.JobID, request)
 	case "repeat", "mono":
 		return m.handleV2Mode(msg.Jobs, msg.JobID, request)
+	case "on_error":
+		switch request.Name {
+		case errorPolicySkip, errorPolicyRetry, errorPolicyStop:
+			m.SetErrorPolicy(request.Name)
+			m.completeV2Job(msg.Jobs, msg.JobID, ipc.Response{OK: true})
+		default:
+			m.failV2Job(msg.Jobs, msg.JobID, v2InvalidParamsError())
+		}
+		return nil
 	case "load":
 		request.Cmd = "provider.load"
 		request.Provider = "local"
@@ -230,6 +239,9 @@ func (m *Model) handleV2QueueRequest(ctx context.Context, jobs *ipc.JobStore, jo
 		m.appendTracks(playlist.TrackFromPath(request.Path))
 		m.completeV2Job(jobs, jobID, m.v2PlaylistResponse())
 		return m.rearmStalePreload()
+	}
+	if request.Cmd == "tracks.add" {
+		return m.handleV2TracksAdd(jobs, jobID, request)
 	}
 	if request.Cmd == "queue.list" {
 		m.completeV2Job(jobs, jobID, m.v2PlaylistResponsePage(request.Offset, request.Limit))
@@ -296,6 +308,42 @@ func (m *Model) handleV2QueueRequest(ctx context.Context, jobs *ipc.JobStore, jo
 	}
 	m.completeV2Job(jobs, jobID, m.v2PlaylistResponse())
 	return nil
+}
+
+// handleV2TracksAdd appends the supplied tracks to the live playlist. Play
+// starts the added track at Index (the first by default) at once; without
+// it the tracks play only when the player was idle, as url.load does.
+func (m *Model) handleV2TracksAdd(jobs *ipc.JobStore, jobID string, request ipc.Request) tea.Cmd {
+	if len(request.Tracks) == 0 {
+		m.failV2Job(jobs, jobID, v2InvalidParamsError())
+		return nil
+	}
+	tracks := make([]playlist.Track, 0, len(request.Tracks))
+	for _, info := range request.Tracks {
+		if info.Path != "" {
+			tracks = append(tracks, ipcTrackFromInfo(info))
+		}
+	}
+	if len(tracks) == 0 {
+		m.failV2Job(jobs, jobID, v2InvalidParamsError())
+		return nil
+	}
+	wasStopped := !m.player.IsPlaying()
+	start := m.appendTracks(tracks...)
+	m.completeV2Job(jobs, jobID, m.v2PlaylistResponse())
+	if request.Play {
+		start += max(0, min(request.Index, len(tracks)-1))
+		m.stopPlayback()
+		m.player.ClearPreload()
+		m.playlist.SetIndex(start)
+		m.plCursor = start
+		m.adjustScroll()
+		return m.playCurrentTrack()
+	}
+	if wasStopped {
+		return m.playCurrentTrack()
+	}
+	return m.rearmStalePreload()
 }
 
 func (m *Model) handleV2PlayNext(jobs *ipc.JobStore, jobID string, request ipc.Request) tea.Cmd {
@@ -555,7 +603,7 @@ func (m *Model) handleV2DeferredRequest(ctx context.Context, jobs *ipc.JobStore,
 	case "save":
 		cmd = m.handleIPCSave(ipcSaveRequest{Context: ctx, Reply: reply})
 	case "lyrics":
-		cmd = m.handleIPCLyrics(ipcLyricsRequest{Context: ctx, Reply: reply})
+		cmd = m.handleIPCLyrics(ipcLyricsRequest{Context: ctx, Reply: reply, Source: request.Name, Refresh: request.Refresh})
 	default:
 		cmd = m.handleIPCHistory(ipcHistoryRequest{Op: request.Cmd, Limit: request.Limit, Reply: reply})
 	}
@@ -872,7 +920,7 @@ func isV2LibraryOperation(operation string) bool {
 
 func v2MutatesLivePlaylist(operation string) bool {
 	switch operation {
-	case "queue", "queue.play", "queue.enqueue", "queue.remove", "queue.move", "queue.clear", "track.play", "track.queue", "playnext.remove", "playnext.move", "playnext.clear":
+	case "queue", "tracks.add", "queue.play", "queue.enqueue", "queue.remove", "queue.move", "queue.clear", "track.play", "track.queue", "playnext.remove", "playnext.move", "playnext.clear":
 		return true
 	default:
 		return false

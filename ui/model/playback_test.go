@@ -103,14 +103,15 @@ func (f *playbackFakeEngine) SeekYTDL(d time.Duration) error {
 	f.seekYTDLCalls = append(f.seekYTDLCalls, d)
 	return f.seekYTDLErr
 }
-func (f *playbackFakeEngine) CancelSeekYTDL()    { f.cancelSeekYTDLCalls++ }
-func (f *playbackFakeEngine) IsPlaying() bool    { return f.playing }
-func (f *playbackFakeEngine) IsPaused() bool     { return f.paused }
-func (f *playbackFakeEngine) Drained() bool      { return f.drained }
-func (f *playbackFakeEngine) HasPreload() bool   { return f.hasPreload }
-func (f *playbackFakeEngine) Seekable() bool     { return f.seekable }
-func (f *playbackFakeEngine) IsYTDLSeek() bool   { return f.ytdlSeek }
-func (f *playbackFakeEngine) IsLiveStream() bool { return f.live }
+func (f *playbackFakeEngine) CancelSeekYTDL()               { f.cancelSeekYTDLCalls++ }
+func (f *playbackFakeEngine) IsPlaying() bool               { return f.playing }
+func (f *playbackFakeEngine) IsPaused() bool                { return f.paused }
+func (f *playbackFakeEngine) Drained() bool                 { return f.drained }
+func (f *playbackFakeEngine) HasPreload() bool              { return f.hasPreload }
+func (f *playbackFakeEngine) TransitionLead() time.Duration { return 0 }
+func (f *playbackFakeEngine) Seekable() bool                { return f.seekable }
+func (f *playbackFakeEngine) IsYTDLSeek() bool              { return f.ytdlSeek }
+func (f *playbackFakeEngine) IsLiveStream() bool            { return f.live }
 func (f *playbackFakeEngine) GaplessAdvanced() bool {
 	if !f.gaplessAdvanced {
 		return false

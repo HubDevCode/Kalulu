@@ -1,289 +1,174 @@
-[![Docs on contextowl.co](https://contextowl.co/uploads/_brand/badge-docs.svg)](https://contextowl.co)
+<p align="center">
+  <img src="packaging/kalulu.png" alt="Kalulu" width="128">
+</p>
 
-A retro terminal music player inspired by Winamp. Play local files, streams, podcasts, YouTube, YouTube Music, SoundCloud, Mixcloud, Bilibili, Spotify, Qobuz, Tidal, NetEase Cloud Music, Yandex Music, Xiaoyuzhou (小宇宙), Navidrome, Lyrion, Plex, Jellyfin, Emby, and Audiobookshelf. Use the spectrum visualizer, parametric EQ, and playlists.
+<h1 align="center">Kalulu</h1>
 
-**[cliamp.stream](https://cliamp.stream)** | **[docs](https://whiterose.org.contextowl.co/docs/cliamp)** | **[android](https://github.com/cliamp/cliamp-mobile)** | **[discord](https://discord.gg/4VpCzXPuj2)**
+<p align="center">
+  Un lettore musicale moderno, leggero e completo per Linux.<br>
+  YouTube Music, radio, podcast, file locali e i tuoi servizi, con DJ Mixer, testi sincronizzati parola per parola e ascolto condiviso in rete locale.
+</p>
 
-On a phone, run [cliamp mobile](https://github.com/cliamp/cliamp-mobile). It is a native Android client for radio, podcasts, and the same servers this player talks to.
+<p align="center">
+  <b>Versione 2.5.0</b> · ex GuiAmp · fork grafico di <a href="https://github.com/bjarneo/cliamp">cliamp</a> · licenza GPL-3.0
+</p>
 
-cliamp uses [Bubbletea](https://github.com/charmbracelet/bubbletea), [Lip Gloss](https://github.com/charmbracelet/lipgloss), [Beep](https://github.com/gopxl/beep), and [go-librespot](https://github.com/devgianlu/go-librespot).
+![La Home di Kalulu](docs/images/kalulu-home.png)
 
-https://github.com/user-attachments/assets/55e251f2-e13b-43d9-bb6a-7b1960e7d7d0
+## Perché Kalulu
 
-<div align="center">
-  <a href="https://contextowl.co"><img src="https://contextowl.co/uploads/_brand/sponsor-dark.svg" alt="Proudly sponsored by contextowl.co" width="400"></a>
-</div>
+Kalulu unisce il motore di [cliamp](https://github.com/bjarneo/cliamp), un lettore da terminale veloce e collaudato, con una finestra moderna. Non serve nessun account: la Home propone musica di YouTube Music in base al paese, e ogni scheda parte con un clic. Se hai già dei servizi (Navidrome, Jellyfin, Plex, Spotify, Tidal, Qobuz…) li trovi nella Libreria.
 
-## Install
+![Il player con i testi sincronizzati](docs/images/kalulu-player.png)
 
-```sh
-curl -fsSL https://cliamp.stream/install.sh | sh
-```
+## Funzioni
 
-**Homebrew**
+**Scoprire e ascoltare**
+- Home modulare: mix fatti per te in base a cosa ascolti, YouTube Music, classifiche, generi e mood, radio e podcast del tuo paese. Scegli tu sezioni e ordine.
+- Ricerca con suggerimenti mentre scrivi. Brani, artisti, album, video e playlist.
+- Autoplay: quando la coda finisce, continua con brani simili.
+- Radio di tutto il mondo ([Radio Browser](https://www.radio-browser.info)) e podcast delle classifiche Apple.
+- File locali, cartelle, URL, playlist M3U/PLS, feed. Basta trascinarli sulla finestra.
 
-```sh
-brew install bjarneo/cliamp/cliamp
-```
+**Audio**
+- Avvio rapido: i brani YouTube partono dall'URL audio diretto, e i successivi in coda vengono preparati in anticipo.
+- Qualità di streaming Opus: alta, bilanciata, risparmio dati o automatica in base alla connessione.
+- Precaricamento senza pause tra i brani, salto del silenzio iniziale e finale, ripresa automatica dagli errori.
+- Equalizzatore a 10 bande con preset, normalizzazione del volume, bilanciamento L/R, mono e velocità.
 
-The formula installs all required runtime libraries.
+**DJ Mixer**
+- Analizza tempo, battute, frasi, tonalità ed energia di ogni brano.
+- Transizioni a tempo come un DJ: allineamento delle battute, adattamento del tempo, filtri, eco, dissolvenze.
+- Preset Smooth, Beat Match, Long Mix, Quick Mix e Manuale, con durata, intensità e anteprima.
 
-**Arch Linux (AUR)**
+**Testi**
+- Testi sincronizzati parola per parola, stile karaoke, con animazioni fluide e schermo intero.
+- Nove fonti gratuite interrogate insieme, senza account: LyricsPlus, lrc.red e Paxsenix (testi Apple Music parola per parola), LRCLIB, BetterLyrics Unison, NetEase, QQ Music, Kugou e lyrics.ovh. Kalulu tiene il risultato migliore e lo salva.
+- L'ingranaggio sotto i testi permette di cercare di nuovo, scegliere la fonte e regolare l'offset.
 
-```sh
-yay -S cliamp
-```
+**Interfaccia**
+- I colori della finestra seguono la copertina del brano, con contrasto sempre leggibile.
+- Visualizer con la sfera NCS che pulsa a tempo, più barre, specchio, radiale e altri stili.
+- Densità, dimensione del testo, barra laterale, animazioni ridotte: tutto personalizzabile.
+- Icona nel tray: chiudendo la finestra la musica continua.
+- Riapre la coda e il brano dove li avevi lasciati.
+- Un'unica istanza: un secondo avvio porta in primo piano la finestra e le passa i file.
+- Interfaccia in italiano e in inglese.
 
-**Nix**
+**Ascolto condiviso**
+- Crea una stanza con un codice e ascoltate insieme sulla rete locale, sincronizzati al decimo di secondo.
+- Ruoli: Owner, Editor, Su richiesta (propone brani da approvare) e Ascoltatore.
+- Nessuna esposizione su Internet: la stanza risponde solo agli indirizzi della LAN.
 
-```sh
-nix run github:bjarneo/cliamp
-```
+**Leggero**
+- Circa 300 MB di RAM durante la riproduzione, stabili anche dopo ore di ascolto.
+- Copertine tenute alla dimensione in cui sono mostrate. Visualizer e animazioni si fermano quando la finestra è nascosta.
 
-For a declarative NixOS configuration, add `github:bjarneo/cliamp` as a flake
-input. Install its default package:
+**Aggiornamenti**
+- Controlla le release di questo repository. Scarica l'AppImage e la installa solo se coincide con il suo `SHA256SUMS`.
 
-```nix
-inputs.cliamp.url = "github:bjarneo/cliamp";
+![Equalizzatore e audio](docs/images/kalulu-equalizer.png)
 
-environment.systemPackages = [
-  inputs.cliamp.packages.${pkgs.stdenv.hostPlatform.system}.default
-];
-```
+## Installazione
 
-**Go**
+### Requisiti
 
-```sh
-go install github.com/bjarneo/cliamp@latest
-```
+| Cosa | Perché |
+| --- | --- |
+| `yt-dlp` | YouTube, YouTube Music, SoundCloud, Bandcamp |
+| `ffmpeg` | AAC, Opus, ALAC, flussi di rete e analisi del DJ Mixer |
+| `pipewire-alsa` o `pulseaudio-alsa` | uscita audio su PipeWire / PulseAudio |
 
-Install ALSA development headers before you build on Linux. See [Building from source](#building-from-source).
+### Compilare dai sorgenti
 
-**Pre-built binaries**
-
-Download from [GitHub Releases](https://github.com/bjarneo/cliamp/releases/latest).
-
-> **macOS:** Pre-built binaries link dynamically to FLAC, Vorbis, Ogg, and mpg123
-> from Homebrew. If you download from Releases or use `install.sh`, install these
-> libraries first. Otherwise, you can see errors such as
-> `Library not loaded: /opt/homebrew/opt/libvorbis/lib/libvorbisenc.2.dylib`:
->
-> ```sh
-> brew install flac libvorbis libogg mpg123
-> ```
->
-> `brew install bjarneo/cliamp/cliamp` installs these libraries.
->
-> **Linux:** Pre-built binaries link FLAC, Vorbis, Ogg, and mpg123 statically. No
-> extra codec packages are required. You can still need an ALSA bridge for your
-> sound server. See [Troubleshooting](#troubleshooting).
->
-> **Windows:** Download and extract `cliamp-windows-amd64.zip` from Releases. It
-> includes the codec DLLs that Spotify requires. On Windows, cliamp stores
-> its config under `%APPDATA%\cliamp` unless `HOME` names another directory.
-
-**Optional runtime dependencies** for all platforms and install methods:
-
-- [ffmpeg](https://ffmpeg.org/) for AAC, ALAC, Opus, and WMA playback
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) for YouTube, YouTube Music, SoundCloud, Mixcloud, Bandcamp, Bilibili, and NetEase Cloud Music
-
-On macOS, run `brew install ffmpeg yt-dlp`. On Linux, use your distribution package manager.
-
-On Windows, install `ffmpeg` and `yt-dlp` with your package manager. Keep both on `PATH`.
-
-**Build from source**
+Servono Go (la versione indicata in `go.mod`), un compilatore C e le librerie di sviluppo di ALSA, OpenGL, X11 e Wayland.
 
 ```sh
-git clone https://github.com/bjarneo/cliamp.git && cd cliamp && go build -o cliamp .
+# Arch, Manjaro, EndeavourOS
+sudo pacman -S --needed base-devel go alsa-lib libglvnd libxcursor libxrandr libxinerama libxi libxxf86vm libxkbcommon wayland flac libvorbis libogg mpg123 yt-dlp ffmpeg
+
+# Debian, Ubuntu, Mint, Pop!_OS
+sudo apt install golang gcc pkg-config libasound2-dev libgl1-mesa-dev xorg-dev libxkbcommon-dev libwayland-dev libflac-dev libvorbis-dev libogg-dev libmpg123-dev yt-dlp ffmpeg
+
+# Fedora
+sudo dnf install golang gcc alsa-lib-devel mesa-libGL-devel libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel libXxf86vm-devel libxkbcommon-devel wayland-devel flac-devel libvorbis-devel libogg-devel mpg123-devel yt-dlp ffmpeg
 ```
 
-## Quick Start
+Poi:
 
 ```sh
-cliamp ~/Music                     # play a directory
-cliamp *.mp3 *.flac               # play files
-cliamp https://example.com/stream  # play a URL
+git clone https://github.com/HubDevCode/Kalulu.git
+cd Kalulu
+make build      # crea ./kalulu
+make install    # in ~/.local/bin, con voce nel menu applicazioni e icona
 ```
 
-Press `Ctrl+K` to see all keybindings.
+Le dipendenze di openSUSE, Void e Alpine sono in [docs/gui.md](docs/gui.md).
 
-**Configure remote providers** such as Navidrome, Lyrion, Plex, Jellyfin, Emby, Audiobookshelf, Spotify, Qobuz, Tidal, Mixcloud, YouTube Music, and NetEase Cloud Music with the interactive wizard:
+### AppImage e Flatpak
+
+`make appimage` crea un `Kalulu-<versione>-<arch>.AppImage` portabile, con il suo file `SHA256SUMS`. Per il Flatpak c'è `packaging/flatpak/io.kalulu.Kalulu.yml`. I dettagli sono in [docs/gui.md](docs/gui.md).
+
+## Uso
 
 ```sh
-cliamp setup
+kalulu                          # apre la finestra
+kalulu ~/Musica/album           # apre la finestra e riproduce una cartella
+kalulu https://…                # un URL, una playlist, un feed
+kalulu --background             # parte direttamente nel tray
+kalulu --room "Festa"           # apre una stanza di ascolto condiviso
+kalulu --join HOST:PORTA/CODICE # entra in una stanza
+kalulu --tui                    # l'interfaccia da terminale di cliamp
+kalulu -d                       # senza interfaccia, controllato dal socket
 ```
 
-The wizard guides you through each provider. It writes the provider keys into the section of that provider in your config file (`~/.config/cliamp/config.toml`, or `%APPDATA%\cliamp\config.toml` on Windows unless `HOME` names another directory). It keeps your other keys and comments. It validates supported server connections during setup. The OAuth providers Spotify, Qobuz and Tidal sign in later in the player. Mixcloud checks optional browser-session or OAuth credentials when you use them. See [docs/cli.md](docs/cli.md#setup-wizard) for details.
+Premi `F1` nella finestra per vedere le scorciatoie da tastiera. Le scorciatoie con una sola lettera non si attivano mai mentre scrivi in una casella di testo.
 
-See the [Mixcloud provider guide](docs/mixcloud.md) for discovery, account,
-creator/show, genre search, local genre favorites, authentication, signed-in
-playback, resume, seeking, and limitations.
+## Configurazione
 
-For podcast discovery and subscriptions, run `cliamp --provider podcast`.
-Browse Apple's top 100 shows and 19 categories, search with `/` then `Enter`,
-and subscribe with `f`. No account or API key is needed.
-See the [Podcasts guide](docs/podcasts.md).
+Kalulu usa la configurazione di cliamp in `~/.config/cliamp/config.toml`, quindi un'installazione di cliamp esistente funziona subito. Quasi tutto si regola da **Impostazioni**, divise in categorie: Generale, Personalizzazione, Home e servizi, Notifiche, Riproduzione, Transizioni, Audio, Testi, Visualizer, Rete, Download, Prestazioni, Plugin, Avanzate, Aggiornamenti.
 
-## Remote Control
+Le preferenze si possono esportare e importare da Impostazioni → Avanzate. I servizi (Navidrome, Jellyfin, Plex, Emby, Spotify, Tidal, Qobuz, SoundCloud, Mixcloud…) si configurano in Impostazioni → Home e servizi. La guida di ogni servizio è nella cartella [docs](docs).
 
-Control a running cliamp from a script, a status bar, or a key binding:
+| Percorso | Contenuto |
+| --- | --- |
+| `~/.config/cliamp/config.toml` | configurazione del motore e dei servizi |
+| `~/.config/cliamp/kalulu-session.json` | coda e brano dell'ultima sessione |
+| `~/.config/cliamp/kalulu-crash.log` | rapporto di un eventuale crash |
+| `~/.config/fyne/io.kalulu.Kalulu` | preferenze della finestra |
+| `~/.cache/kalulu` | copertine, analisi DJ, testi |
+
+## Documentazione
+
+- [docs/gui.md](docs/gui.md): la finestra, Discover, DJ Mixer, testi, ascolto condiviso, memoria, installazione.
+- [docs/remote-control.md](docs/remote-control.md): il controllo remoto via socket (API V2).
+- [docs/plugins.md](docs/plugins.md): i plugin Lua di cliamp, che funzionano anche in Kalulu.
+- [docs/configuration.md](docs/configuration.md): tutte le chiavi di `config.toml`.
+
+## Sviluppo
 
 ```sh
-cliamp toggle
-cliamp next
-cliamp status --json
+make build     # compila ./kalulu
+make test      # go test ./...
+make preview   # disegna la finestra fuori schermo in build/preview/*.png
 ```
 
-Media keys work through MPRIS on Linux, Now Playing on macOS, and global
-hotkeys on Windows.
+Il codice della finestra è nel pacchetto `gui/`. Parla con il motore di cliamp solo tramite le operazioni V2, in `gui_main.go`. Il resto del progetto:
 
-Run `cliamp --daemon` to play without a TUI. Headless mode runs the same
-player as the TUI. It loads your Lua plugins, reports plays to Navidrome,
-Jellyfin, and the other providers that take play reports, and adds each track
-to Recently Played when the track starts. See
-[docs/headless.md](docs/headless.md) and
-[docs/remote-control.md](docs/remote-control.md).
+| Pacchetto | Contenuto |
+| --- | --- |
+| `discover/` | YouTube Music senza account, podcast, radio |
+| `djmix/` | analisi dei brani e pianificazione delle transizioni DJ |
+| `player/` | motore audio, precaricamento, mix, silenzio, qualità, risoluzione rapida di YouTube |
+| `lyrics/` | ricerca dei testi su più fonti, con cache |
+| `share/` | ascolto condiviso in LAN |
 
-## Radio
+## Riconoscimenti
 
-Press `R` in the player to browse about 58,000 online radio stations in the [Radio Browser](https://www.radio-browser.info/) directory.
+Kalulu è un fork di [cliamp](https://github.com/bjarneo/cliamp) di Bjarne Øverli. Il motore, i servizi e i plugin vengono da lì: grazie! I testi arrivano dai servizi gratuiti citati sopra, e la scoperta musicale da YouTube Music, [Radio Browser](https://www.radio-browser.info) e dalle classifiche Apple Podcasts.
 
-Cut that down by location or genre: `N` browses by country, **Browse genres &
-tags** opens the directory's complete tag index, and `/` filters either list.
-`f` pins the countries you listen to, and `Enter` on a country or tag loads its
-stations as a playlist. cliamp does not work out where you are unless you pick
-"Use my location" and accept; it then reads your country from the system
-timezone, never from a geo-IP service. See [docs/radio.md](docs/radio.md).
+## Licenza
 
-Add your own stations to `~/.config/cliamp/radios.toml` (or `%APPDATA%\cliamp\radios.toml` on Windows unless `HOME` names another directory). See [docs/configuration.md](docs/configuration.md#custom-radio-stations).
+Kalulu è software libero: puoi ridistribuirlo e modificarlo secondo i termini della [GNU General Public License](LICENSE), versione 3 o (a tua scelta) qualsiasi versione successiva.
 
-To host a radio station, use [cliamp-server](https://github.com/bjarneo/cliamp-server).
-
-## Building from source
-
-**Prerequisites:**
-
-- [Go](https://go.dev/dl/) 1.26.9 or later
-- ALSA development headers (Linux only, required by the audio backend)
-
-**Linux (Debian/Ubuntu):**
-
-```sh
-sudo apt install libasound2-dev libflac-dev libvorbis-dev libogg-dev libmpg123-dev
-```
-
-**Linux (Fedora):**
-
-```sh
-sudo dnf install alsa-lib-devel flac-devel libvorbis-devel libogg-devel mpg123-devel
-```
-
-**Linux (Arch):**
-
-```sh
-sudo pacman -S alsa-lib flac libvorbis libogg mpg123
-```
-
-**macOS:**
-
-```sh
-brew install flac libvorbis libogg mpg123 pkg-config
-```
-
-**Windows:** The core player needs no extra SDKs. It uses pure-Go audio decoding. `ffmpeg.exe` and `yt-dlp.exe` remain optional runtime dependencies for the same formats and providers as other platforms.
-
-Spotify support uses `go-librespot`. It needs CGO and a MinGW toolchain:
-
-1. Install [MSYS2](https://www.msys2.org/).
-2. Open the **MSYS2 MinGW64** terminal, not the standard MSYS2 terminal. Install the toolchain and codec libraries:
-
-   ```sh
-   pacman -S make \
-     mingw-w64-x86_64-gcc mingw-w64-x86_64-go mingw-w64-x86_64-pkg-config \
-     mingw-w64-x86_64-libogg mingw-w64-x86_64-libvorbis \
-     mingw-w64-x86_64-flac mingw-w64-x86_64-mpg123
-   ```
-
-   To check if Go was installed correctly, run
-
-   ```sh
-   go env GOROOT
-   ```
-
-   If the command causes the error `go: cannot find GOROOT directory: 'go' binary is trimmed and GOROOT is not set`,
-   it means that the enviroment `GOROOT` variable has to be manually set:
-
-   ```sh
-   export GOROOT=/mingw64/lib/go
-   ```
-
-   Now, when running `go env GOROOT`, the output should be: `<mtsys2-install-folder>/mingw64/lib/go`
-3. In that MinGW64 terminal, build with CGO enabled. This keeps `gcc` and `pkg-config` on `PATH`:
-
-   ```sh
-   CGO_ENABLED=1 go build -o cliamp.exe .
-   ```
-
-   Some MSYS2 `libogg` builds provide `libogg-0.dll` without `ogg_stream_iovecin` in its export table. The static `libogg.a` has this symbol. If linking fails with `undefined reference to 'ogg_stream_iovecin'`, use static linking for this library only:
-
-   ```sh
-   CGO_LDFLAGS="-Wl,-Bstatic -logg -Wl,-Bdynamic" CGO_ENABLED=1 go build -o cliamp.exe .
-   ```
-
-4. `cliamp.exe` links dynamically to codec and MinGW runtime DLLs. Keep `C:\msys64\mingw64\bin` on `PATH` at runtime, or copy each `/mingw64/bin/*.dll` that `ldd cliamp.exe` shows next to `cliamp.exe`.
-
-**Clone and build:**
-
-```sh
-git clone https://github.com/bjarneo/cliamp.git
-cd cliamp
-make && make install
-```
-
-Or without Make: `go build -o cliamp .`
-
-`make install` places the binary in `~/.local/bin/`.
-
-A source build uses the same optional runtime dependencies as the other install methods. See [Install](#install).
-
-## Docs
-
-Full documentation is hosted at **[whiterose.org.contextowl.co/docs/cliamp](https://whiterose.org.contextowl.co/docs/cliamp)**.
-
-## Troubleshooting
-
-**No audio output**
-
-cliamp reports `audio output unavailable` when it cannot open an output
-device. On Linux systems that use PipeWire or PulseAudio, the cliamp ALSA
-backend needs a bridge package to route audio through the sound server:
-
-- **PipeWire:** `pipewire-alsa`
-- **PulseAudio:** `pulseaudio-alsa` (`libasound2-plugins` on Debian/Ubuntu)
-
-Install the package for your system:
-
-```sh
-# PipeWire (Arch)
-sudo pacman -S pipewire-alsa
-
-# PulseAudio (Arch)
-sudo pacman -S pulseaudio-alsa
-
-# Debian/Ubuntu (PipeWire)
-sudo apt install pipewire-alsa
-
-# Debian/Ubuntu (PulseAudio, including WSL2)
-sudo apt install libasound2-plugins
-```
-
-On WSL2 see [WSL2 setup](docs/configuration.md#wsl2-windows-subsystem-for-linux)
-for the extra ALSA routing step.
-
-## Author
-
-[x.com/iamdothash](https://x.com/iamdothash)
-
-## Disclaimer
-
-Use this software at your own risk. The authors are not responsible for damage or issues that result from its use.
+Kalulu contiene il codice di cliamp, © Bjarne Øverli, distribuito con licenza MIT. Come richiede quella licenza, il suo avviso originale è conservato in [LICENSES/MIT-cliamp.txt](LICENSES/MIT-cliamp.txt).

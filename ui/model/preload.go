@@ -52,12 +52,15 @@ func (m *Model) preloadNext() tea.Cmd {
 		return nil
 	}
 	isYTDL := playlist.IsYTDL(next.Path)
+	// A crossfade or a DJ mix starts before the end, so it needs the next
+	// track ready earlier than a gapless handover does.
+	transitionLead := m.player.TransitionLead()
 	// Preload yt-dlp tracks with the same lead-time deferral as HTTP streams.
 	if isYTDL {
 		dur := m.player.Duration()
 		if dur > 0 {
 			remaining := dur - m.player.Position()
-			if remaining > ytdlPreloadLeadTime {
+			if remaining > max(ytdlPreloadLeadTime, transitionLead) {
 				return nil
 			}
 		}
@@ -75,7 +78,7 @@ func (m *Model) preloadNext() tea.Cmd {
 		}
 		pos := m.player.Position()
 		remaining := dur - pos
-		if remaining > streamPreloadLeadTime {
+		if remaining > max(streamPreloadLeadTime, transitionLead) {
 			// Too early — caller should retry from the tick loop.
 			return nil
 		}

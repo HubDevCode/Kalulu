@@ -1,0 +1,46 @@
+# Flatpak manifest for Kalulu.
+#
+# Flatpak builds run offline, so vendor the Go modules first:
+#   go mod vendor
+#   flatpak-builder --user --install --force-clean build packaging/flatpak/io.kalulu.Kalulu.yml
+app-id: io.kalulu.Kalulu
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.golang
+command: kalulu
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --device=dri
+  # Music folders and the cliamp configuration, which Kalulu shares.
+  - --filesystem=xdg-music
+  - --filesystem=xdg-download
+  - --filesystem=~/.config/cliamp:create
+  - --filesystem=~/.local/share/cliamp:create
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --own-name=org.mpris.MediaPlayer2.cliamp
+  - --own-name=org.mpris.MediaPlayer2.cliamp.*
+build-options:
+  append-path: /usr/lib/sdk/golang/bin
+  env:
+    GOFLAGS: -mod=vendor
+    CGO_ENABLED: '1'
+modules:
+  - name: kalulu
+    buildsystem: simple
+    build-commands:
+      - go build -trimpath -ldflags="-s -w" -o kalulu .
+      - install -Dm755 kalulu /app/bin/kalulu
+      - install -Dm644 packaging/kalulu.desktop /app/share/applications/io.kalulu.Kalulu.desktop
+      - sed -i 's/^Icon=kalulu$/Icon=io.kalulu.Kalulu/' /app/share/applications/io.kalulu.Kalulu.desktop
+      - install -Dm644 packaging/kalulu.png /app/share/icons/hicolor/512x512/apps/io.kalulu.Kalulu.svg
+      - install -Dm644 packaging/io.kalulu.Kalulu.metainfo.xml /app/share/metainfo/io.kalulu.Kalulu.metainfo.xml
+    sources:
+      - type: dir
+        path: ../..

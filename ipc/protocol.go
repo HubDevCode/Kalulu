@@ -29,6 +29,7 @@ type Request struct {
 	Tracks   []TrackInfo `json:"tracks,omitempty"`
 	Topics   []string    `json:"topics,omitempty"`
 	Play     bool        `json:"play,omitempty"`
+	Refresh  bool        `json:"refresh,omitempty"`
 }
 
 // Response is the operation-specific data embedded in a successful V2 job.
@@ -63,8 +64,10 @@ type Response struct {
 	Albums     []AlbumInfo    `json:"albums,omitempty"`
 	Sorts      []SortInfo     `json:"sorts,omitempty"`
 	Lyrics     []LyricLine    `json:"lyrics,omitempty"`
-	History    []HistoryInfo  `json:"history,omitempty"`
-	Devices    []DeviceInfo   `json:"devices,omitempty"`
+	// LyricsSource names where the lyrics came from.
+	LyricsSource string        `json:"lyrics_source,omitempty"`
+	History      []HistoryInfo `json:"history,omitempty"`
+	Devices      []DeviceInfo  `json:"devices,omitempty"`
 }
 
 // ThemeInfo carries the active theme name and its resolved hex colors.
@@ -147,6 +150,13 @@ type SortInfo struct {
 }
 
 type LyricLine struct {
+	Start float64     `json:"start"`
+	Text  string      `json:"text"`
+	Words []LyricWord `json:"words,omitempty"`
+}
+
+// LyricWord is a timed word of an enhanced LRC line.
+type LyricWord struct {
 	Start float64 `json:"start"`
 	Text  string  `json:"text"`
 }

@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Kalulu
+GenericName=Music Player
+Comment=Modern graphical music player — local files, streams, radio, podcasts and streaming services
+Exec=kalulu %U
+TryExec=kalulu
+Icon=kalulu
+Terminal=false
+Categories=AudioVideo;Audio;Player;Music;
+Keywords=music;audio;player;radio;podcast;spotify;winamp;cliamp;
+MimeType=audio/mpeg;audio/flac;audio/x-flac;audio/ogg;audio/x-vorbis+ogg;audio/opus;audio/wav;audio/x-wav;audio/aac;audio/mp4;audio/x-m4a;audio/x-mpegurl;audio/x-scpls;application/vnd.apple.mpegurl;
+StartupWMClass=Kalulu
+StartupNotify=true

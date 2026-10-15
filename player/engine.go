@@ -26,6 +26,9 @@ type Engine interface {
 	IsPaused() bool
 	Drained() bool
 	HasPreload() bool
+	// TransitionLead is how long before the end of a track the next one
+	// must be preloaded for a crossfade or a DJ mix; zero when off.
+	TransitionLead() time.Duration
 	Seekable() bool
 	IsYTDLSeek() bool
 	IsLiveStream() bool

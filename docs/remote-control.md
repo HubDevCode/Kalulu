@@ -122,17 +122,28 @@ Run `cliamp remote capabilities` to get the current machine-readable list.
 
 | Group | Operations |
 | --- | --- |
-| Playback | `play`, `pause`, `toggle`, `stop`, `next`, `prev`, `volume`, `volume.adjust`, `seek`, `seek.absolute`, `speed`, `speed.adjust`, `shuffle`, `repeat`, `mono`, `eq`, `device` |
+| Playback | `play`, `pause`, `toggle`, `stop`, `next`, `prev`, `volume`, `volume.adjust`, `seek`, `seek.absolute`, `speed`, `speed.adjust`, `shuffle`, `repeat`, `mono`, `on_error`, `eq`, `device` |
 | Appearance | `theme`, `vis` |
-| Live playlist | `queue`, `queue.list`, `queue.play`, `queue.enqueue`, `queue.remove`, `queue.move`, `queue.clear`, `track.play`, `track.queue` |
+| Live playlist | `queue`, `queue.list`, `queue.play`, `queue.enqueue`, `queue.remove`, `queue.move`, `queue.clear`, `track.play`, `track.queue`, `tracks.add` |
 | Play-next | `playnext.list`, `playnext.remove`, `playnext.move`, `playnext.clear` |
 | Sources | `load`, `url.load`, `save`, `lyrics`, `history`, `history.clear` |
+
+`lyrics` takes an optional `name`, one source among `lyricsplus`, `lrcred`,
+`paxsenix`, `lrclib`, `unison`, `netease`, `qq`, `kugou` and `lyricsovh`
+(empty asks them all), and `refresh: true` to skip the lyrics cache. The
+answer carries `lyrics_source`.
 | Providers | `provider.list`, `provider.playlists`, `provider.tracks`, `provider.load`, `provider.search`, `provider.artists`, `provider.artist_albums`, `provider.albums`, `provider.album_tracks`, `provider.load_album`, `provider.favorite`, `provider.catalog` |
 | Saved playlists | `playlist.create`, `playlist.rename`, `playlist.delete`, `playlist.add`, `playlist.add_many`, `playlist.replace`, `playlist.remove`, `playlist.bookmark` |
 | Plugins | `plugin.call`, `plugin.commands` |
 
 `queue.*` applies to the live playlist. `playnext.*` applies only to the
 play-next list. They use separate zero-based indexes.
+
+`tracks.add` appends the track objects in `tracks` to the live playlist in
+one call. With `"play": true` it plays the one at `index` (the first by
+default) at once; without
+it the tracks play only when the player was idle, as `url.load` does. The
+Kalulu window uses it for opened files, folders and drag and drop.
 
 `queue`, `queue.move`, and `queue.remove` follow the rules of the
 `Shift+Up`, `Shift+Down`, and `x` keys. The Lua `cliamp.queue` functions

@@ -13,4 +13,4 @@
 ## Checklist
 
 - [ ] `make check` passes
-- [ ] `docs/` and `site/index.html` updated for user-facing changes
+- [ ] `docs/` updated for user-facing changes

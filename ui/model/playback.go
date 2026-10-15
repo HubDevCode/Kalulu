@@ -425,8 +425,11 @@ func (m *Model) playTrack(track playlist.Track) tea.Cmd {
 			m.provPane.signIn = true
 			m.err = nil
 		} else {
-			m.err = err
 			applog.Warn("play %q: %v", track.Path, err)
+			if cmd, handled := m.applyErrorPolicy(track); handled {
+				return cmd
+			}
+			m.err = err
 		}
 	} else {
 		m.err = nil

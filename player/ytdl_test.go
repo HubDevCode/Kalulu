@@ -22,6 +22,8 @@ func installYTDLRetryFixtures(t *testing.T, mode string) (string, string) {
 		t.Skip("uses POSIX process fixtures")
 	}
 
+	ytDirectEnabled = false
+	t.Cleanup(func() { ytDirectEnabled = true })
 	dir := t.TempDir()
 	attemptsPath := filepath.Join(dir, "attempts")
 	ffmpegDonePath := filepath.Join(dir, "ffmpeg-done")

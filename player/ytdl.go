@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"github.com/bjarneo/cliamp/applog"
 	"io"
 	"os"
 	"os/exec"
@@ -174,7 +175,7 @@ func (y *ytdlPipeStreamer) Seek(int) error { return nil }
 // until yt-dlp gets data or gives up. Close reaps both processes later.
 func (y *ytdlPipeStreamer) interrupt() {
 	_ = y.pipe.Close()
-	if y.ytdlCmd.Process != nil {
+	if y.ytdlCmd != nil && y.ytdlCmd.Process != nil {
 		_ = y.ytdlCmd.Process.Kill()
 	}
 	if y.ffmpegCmd.Process != nil {
@@ -185,7 +186,7 @@ func (y *ytdlPipeStreamer) interrupt() {
 func (y *ytdlPipeStreamer) Close() error {
 	y.closeOnce.Do(func() {
 		// Kill both processes to stop downloading/decoding.
-		if y.ytdlCmd.Process != nil {
+		if y.ytdlCmd != nil && y.ytdlCmd.Process != nil {
 			y.ytdlCmd.Process.Kill()
 		}
 		if y.ffmpegCmd.Process != nil {
@@ -250,7 +251,7 @@ func decodeYTDLPipe(pageURL string, sr beep.SampleRate, bitDepth, startSec int) 
 	// only muxed video+audio over HLS, so fall back to "best" as a last
 	// resort; the ffmpeg stage below outputs PCM audio and drops the video.
 	ytdlArgs := []string{
-		"-f", "bestaudio[protocol=https]/bestaudio[protocol=http]/bestaudio[protocol!=m3u8_native][protocol!=m3u8]/bestaudio/best",
+		"-f", ytdlFormat(),
 		"--no-playlist",
 		"--quiet",
 		"--no-warnings",
@@ -338,10 +339,124 @@ func decodeYTDLPipe(pageURL string, sr beep.SampleRate, bitDepth, startSec int) 
 	}, format, nil
 }
 
+// decodeYTDLDirect plays the direct audio URL of a YouTube page with ffmpeg
+// alone: it starts in a fraction of a second and seeks with HTTP ranges.
+func decodeYTDLDirect(res YTResolved, sr beep.SampleRate, bitDepth, startSec int) (*ytdlPipeStreamer, beep.Format, error) {
+	if err := requireFFmpeg(); err != nil {
+		return nil, beep.Format{}, err
+	}
+	_, _, precision := ffmpegPCMArgs(bitDepth)
+	args := []string{"-nostdin", "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_on_network_error", "1", "-reconnect_delay_max", "5", "-rw_timeout", "15000000"}
+	if res.UserAgent != "" {
+		args = append(args, "-user_agent", res.UserAgent)
+	}
+	if startSec > 0 {
+		args = append(args, "-ss", strconv.Itoa(startSec))
+	}
+	args = append(args, "-i", res.URL)
+	args = append(args, pcmOutputArgs(sr, bitDepth)...)
+	ffmpegCmd := exec.Command("ffmpeg", args...)
+	var ffmpegStderr limitedBuffer
+	ffmpegCmd.Stderr = &ffmpegStderr
+	pcmR, pcmW, err := os.Pipe()
+	if err != nil {
+		return nil, beep.Format{}, fmt.Errorf("os.Pipe: %w", err)
+	}
+	ffmpegCmd.Stdout = pcmW
+	if err := ffmpegCmd.Start(); err != nil {
+		pcmR.Close()
+		pcmW.Close()
+		return nil, beep.Format{}, fmt.Errorf("ffmpeg start: %w", err)
+	}
+	pcmW.Close()
+	ffmpegErrCh, ffmpegDone := monitorExit(ffmpegCmd, &ffmpegStderr, "ffmpeg")
+	// No yt-dlp runs: its channels report a clean exit at once.
+	ytdlErr := make(chan error, 1)
+	ytdlErr <- nil
+	ytdlDone := make(chan struct{})
+	close(ytdlDone)
+	return &ytdlPipeStreamer{
+		ffmpegCmd:  ffmpegCmd,
+		pipe:       pcmR,
+		reader:     bufio.NewReaderSize(pcmR, pipeBufSize),
+		ytdlErr:    ytdlErr,
+		ffmpegErr:  ffmpegErrCh,
+		ytdlDone:   ytdlDone,
+		ffmpegDone: ffmpegDone,
+		pipeReport: pipeReport{state: newPipeStreamState(0)},
+		f32:        bitDepth == 32,
+	}, beep.Format{SampleRate: sr, NumChannels: 2, Precision: precision}, nil
+}
+
+// directYTDL tries the direct URL of a YouTube page. It reports false when
+// the page cannot be resolved or the URL does not play, and the caller then
+// uses the yt-dlp pipe.
+func (p *Player) directYTDL(pageURL string, startSec int) (*ytdlPipeStreamer, beep.Format, bool, error) {
+	if !ytDirectEnabled || !isYouTubePage(pageURL) {
+		return nil, beep.Format{}, false, nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), ytResolveTimeout)
+	defer cancel()
+	start := time.Now()
+	res, err := ResolveYT(ctx, pageURL)
+	if err != nil {
+		applog.Debug("ytdl: resolve %s failed after %v: %v", pageURL, time.Since(start), err)
+		if permanentYTDLError(err) {
+			// The pipe would only meet the same refusal two seconds later.
+			return nil, beep.Format{}, false, err
+		}
+		return nil, beep.Format{}, false, nil
+	}
+	resolved := time.Now()
+	decoder, format, err := decodeYTDLDirect(res, p.sr, p.bitDepth, startSec)
+	if err != nil {
+		return nil, beep.Format{}, false, nil
+	}
+	if err := prefillYTDLPipe(decoder); err != nil {
+		// An expired or refused URL: resolve again next time.
+		ForgetYT(pageURL)
+		applog.Debug("ytdl: direct URL of %s failed: %v", pageURL, err)
+		return nil, beep.Format{}, false, nil
+	}
+	applog.Debug("ytdl: %s resolved in %v, first audio after %v more", pageURL, resolved.Sub(start), time.Since(resolved))
+	return decoder, format, true, nil
+}
+
+// ytDirectEnabled lets YouTube pages play from their resolved URL. Tests of
+// the pipe turn it off.
+var ytDirectEnabled = true
+
+// permanentYTDLError reports a refusal that no retry or other route fixes.
+func permanentYTDLError(err error) bool {
+	msg := err.Error()
+	for _, s := range []string{"Video unavailable", "Private video", "This video is not available", "has been removed", "copyright", "members-only", "age-restricted", "Sign in to confirm your age"} {
+		if strings.Contains(msg, s) {
+			return true
+		}
+	}
+	return false
+}
+
 // buildYTDLPipeline creates a trackPipeline for a yt-dlp URL.
 // If startSec > 0, playback begins at that offset (seek-by-restart).
 func (p *Player) buildYTDLPipeline(pageURL string, startSec int) (*trackPipeline, error) {
 	p.streamTitle.Store("")
+
+	decoder, format, ok, err := p.directYTDL(pageURL, startSec)
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		return p.prefetchNetworkPipeline(&trackPipeline{
+			decoder:      decoder,
+			stream:       decoder,
+			format:       format,
+			seekable:     false,
+			path:         pageURL,
+			ytdlSeek:     true,
+			streamOffset: time.Duration(startSec) * time.Second,
+		}, true), nil
+	}
 
 	for attempt := 1; ; attempt++ {
 		decoder, format, err := decodeYTDLPipe(pageURL, p.sr, p.bitDepth, startSec)
@@ -375,6 +490,14 @@ func (p *Player) buildYTDLPipeline(pageURL string, startSec int) (*trackPipeline
 // probe and no known duration, it asks yt-dlp for the duration while the chain
 // starts.
 func (p *Player) buildYTDLSource(pageURL string, knownDuration time.Duration, probe bool) (*trackPipeline, error) {
+	if knownDuration == 0 && isYouTubePage(pageURL) {
+		// The resolver reads the duration with the URL.
+		ctx, cancel := context.WithTimeout(context.Background(), ytResolveTimeout)
+		if res, err := ResolveYT(ctx, pageURL); err == nil && res.Duration > 0 {
+			knownDuration = res.Duration
+		}
+		cancel()
+	}
 	probe = probe && knownDuration == 0
 	// Probe duration concurrently with pipeline setup so it doesn't delay playback.
 	probeCh := make(chan time.Duration, 1)

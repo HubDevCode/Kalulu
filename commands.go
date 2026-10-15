@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -54,12 +55,16 @@ func buildApp() *cli.Command {
 		&cli.StringFlag{Name: "log-level", Usage: "log level: debug, info, warn, error"},
 		&cli.BoolWithInverseFlag{Name: "expand-playlist", Usage: "expand YouTube and YouTube Music list= URLs to the full playlist", Value: true},
 		&cli.BoolWithInverseFlag{Name: "low-power", Usage: "low-power mode: reduce CPU by lowering UI cadence and disabling visualization"},
-		&cli.BoolFlag{Name: "daemon", Aliases: []string{"d"}, Usage: "run headless (no TUI), serving IPC for scripts/Waybar"},
+		&cli.BoolFlag{Name: "daemon", Aliases: []string{"d"}, Usage: "run headless (no window), serving IPC for scripts/Waybar"},
+		&cli.StringFlag{Name: "room", Usage: "open a shared listening room with this name at start"},
+		&cli.StringFlag{Name: "join", Usage: "join a shared listening room: host:port/CODE"},
+		&cli.BoolFlag{Name: "background", Aliases: []string{"b"}, Usage: "start in the system tray without opening the window"},
+		&cli.BoolFlag{Name: "tui", Aliases: []string{"t"}, Usage: "run the original cliamp terminal interface instead of the window"},
 	}
 
 	return &cli.Command{
-		Name:                  "cliamp",
-		Usage:                 "retro terminal music player",
+		Name:                  "kalulu",
+		Usage:                 "modern graphical music player (a GUI fork of cliamp)",
 		Version:               buildVersion(),
 		EnableShellCompletion: true,
 		Flags:                 rootFlags,
@@ -69,6 +74,13 @@ func buildApp() *cli.Command {
 			}
 			ov, err := overridesFromFlags(c)
 			if err != nil {
+				return err
+			}
+			if !c.Bool("daemon") && !c.Bool("tui") {
+				err := runGUI(ov, c.Args().Slice(), c.Bool("background"), c.String("room"), c.String("join"))
+				if errors.Is(err, errRestart) {
+					return restartSelf()
+				}
 				return err
 			}
 			return run(ov, c.Args().Slice(), c.Bool("daemon"), c.Bool("visualizer-60fps"))

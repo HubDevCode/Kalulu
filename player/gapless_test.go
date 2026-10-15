@@ -61,7 +61,7 @@ func TestPlayerIgnoresStaleGaplessCallback(t *testing.T) {
 
 	// Token 1 belonged to the old preloaded track. It must not close or replace
 	// the manually selected track after a later replacement has won.
-	p.handleGaplessSwap(1)
+	p.handleGaplessSwap(1, false)
 	if p.current != manual {
 		t.Fatal("stale callback replaced the manually selected pipeline")
 	}
@@ -72,7 +72,7 @@ func TestPlayerIgnoresStaleGaplessCallback(t *testing.T) {
 	}
 
 	p.current = old
-	p.handleGaplessSwap(2)
+	p.handleGaplessSwap(2, false)
 	if p.current != preloaded || p.nextPipeline != nil {
 		t.Fatal("matching callback did not promote the preloaded pipeline")
 	}

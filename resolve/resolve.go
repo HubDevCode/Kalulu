@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bjarneo/cliamp/internal/httpclient"
@@ -803,18 +804,38 @@ func parseYTDLTracks(r io.Reader) ([]playlist.Track, int, error) {
 // DownloadYTDLContext downloads a single track via yt-dlp to saveDir and
 // returns the output file path. A cancel of ctx stops yt-dlp. It sets no time
 // limit of its own, because a download can take minutes.
+// DownloadFormat chooses the file format of yt-dlp downloads: "original"
+// keeps the source audio as served (no re-encoding), "opus" and "m4a"
+// extract the matching stream without re-encoding when the source has it,
+// "mp3" and "flac" convert. Empty means "original".
+var DownloadFormat atomic.Value
+
+func downloadArgs() []string {
+	format, _ := DownloadFormat.Load().(string)
+	switch format {
+	case "opus":
+		return []string{"-f", "bestaudio[acodec=opus]/bestaudio", "-x", "--audio-format", "opus", "--embed-metadata"}
+	case "m4a":
+		return []string{"-f", "bestaudio[ext=m4a]/bestaudio", "-x", "--audio-format", "m4a", "--embed-metadata", "--embed-thumbnail"}
+	case "mp3":
+		return []string{"-f", "bestaudio", "-x", "--audio-format", "mp3", "--audio-quality", "0", "--embed-metadata", "--embed-thumbnail"}
+	case "flac":
+		return []string{"-f", "bestaudio", "-x", "--audio-format", "flac", "--embed-metadata"}
+	}
+	return []string{"-f", "bestaudio[protocol=https]/bestaudio[protocol=http]/bestaudio"}
+}
+
 func DownloadYTDLContext(ctx context.Context, pageURL, saveDir string) (string, error) {
 	if _, err := exec.LookPath("yt-dlp"); err != nil {
 		return "", fmt.Errorf("yt-dlp not found in PATH")
 	}
 
 	outTemplate := filepath.Join(saveDir, "%(artist,uploader)s - %(title)s.%(ext)s")
-	args := []string{
-		"-f", "bestaudio[protocol=https]/bestaudio[protocol=http]/bestaudio",
+	args := append(downloadArgs(),
 		"--no-playlist",
 		"--print-json",
 		"-o", outTemplate,
-	}
+	)
 	if browser := ytdlcookies.ForURL(pageURL); browser != "" {
 		args = append(args, "--cookies-from-browser", browser)
 	}
@@ -841,6 +862,10 @@ func DownloadYTDLContext(ctx context.Context, pageURL, saveDir string) (string, 
 	}
 	if e.Filename == "" {
 		return "", fmt.Errorf("yt-dlp: no file downloaded for %s", pageURL)
+	}
+	// The JSON names the file before the audio extraction renamed it.
+	if format, _ := DownloadFormat.Load().(string); format != "" && format != "original" {
+		return strings.TrimSuffix(e.Filename, filepath.Ext(e.Filename)) + "." + format, nil
 	}
 	return e.Filename, nil
 }

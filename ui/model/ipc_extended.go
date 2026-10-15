@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"net/url"
 	"strings"
 	"time"
 
@@ -57,6 +58,8 @@ type ipcSaveRequest struct {
 type ipcLyricsRequest struct {
 	Context context.Context
 	Reply   chan ipc.Response
+	Source  string // empty tries every source
+	Refresh bool
 }
 
 type ipcHistoryRequest struct {
@@ -644,7 +647,9 @@ func (m *Model) handleIPCLyrics(request ipcLyricsRequest) tea.Cmd {
 	lookups := lyricsLookups(track, m.trackLyricsSources())
 	ctx := requestContext(request.Context)
 	return func() tea.Msg {
-		lines, err := lyrics.Lookup(ctx, track.EmbeddedLyrics, artist, title, lookups...)
+		hint := lyrics.Hint{Album: track.Album, Duration: time.Duration(track.DurationSecs) * time.Second, VideoID: youtubeVideoID(track.Path)}
+		res, err := lyrics.Find(ctx, track.EmbeddedLyrics, artist, title, hint, lyrics.Options{Source: request.Source, Refresh: request.Refresh}, lookups...)
+		lines := res.Lines
 		if err != nil {
 			request.Reply <- ipc.Response{OK: false, Error: err.Error()}
 			return nil
@@ -652,10 +657,28 @@ func (m *Model) handleIPCLyrics(request ipcLyricsRequest) tea.Cmd {
 		items := make([]ipc.LyricLine, len(lines))
 		for i, line := range lines {
 			items[i] = ipc.LyricLine{Start: line.Start.Seconds(), Text: line.Text}
+			for _, w := range line.Words {
+				items[i].Words = append(items[i].Words, ipc.LyricWord{Start: w.Start.Seconds(), Text: w.Text})
+			}
 		}
-		request.Reply <- ipc.Response{OK: true, Lyrics: items}
+		request.Reply <- ipc.Response{OK: true, Lyrics: items, LyricsSource: res.Source}
 		return nil
 	}
+}
+
+// youtubeVideoID returns the video of a YouTube URL, or "".
+func youtubeVideoID(path string) string {
+	u, err := url.Parse(path)
+	if err != nil {
+		return ""
+	}
+	switch strings.TrimPrefix(strings.ToLower(u.Hostname()), "www.") {
+	case "youtube.com", "music.youtube.com", "m.youtube.com":
+		return u.Query().Get("v")
+	case "youtu.be":
+		return strings.Trim(u.Path, "/")
+	}
+	return ""
 }
 
 func (m *Model) handleIPCHistory(request ipcHistoryRequest) tea.Cmd {

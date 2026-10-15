@@ -147,6 +147,9 @@ func (m *Model) handleStreamPlayed(msg streamPlayedMsg) tea.Cmd {
 				return m.nextTrack()
 			}
 		}
+		if cmd, handled := m.applyErrorPolicy(track); handled {
+			return cmd
+		}
 		m.err = msg.err
 		// A local file is never gated, so m.err alone reports its failure.
 		if track, idx := m.currentPlaybackTrack(); idx >= 0 && !plainLocalPath(msg.path) {
@@ -192,3 +195,40 @@ func (m *Model) handleTrackSaved(msg trackSavedMsg) {
 		m.status.Errorf(statusTTLShort, "Save failed: %s", msg.err)
 	}
 }
+
+// Error policies for a track that fails to start.
+const (
+	errorPolicySkip  = "skip"  // play the next track
+	errorPolicyRetry = "retry" // try once more, then skip
+	errorPolicyStop  = "stop"  // stay on the track
+)
+
+// applyErrorPolicy handles a failed start by the chosen policy. handled is
+// false when the failure should be reported and playback stays.
+func (m *Model) applyErrorPolicy(track playlist.Track) (tea.Cmd, bool) {
+	// Without a policy the TUI keeps cliamp's behavior: report and stay.
+	policy := m.errorPolicy
+	if policy == "" || policy == errorPolicyStop || m.currentPlaybackIsLive(track) {
+		return nil, false
+	}
+	if policy == errorPolicyRetry {
+		if m.retried == nil {
+			m.retried = map[string]int{}
+		}
+		if m.retried[track.Path] < 1 {
+			m.retried[track.Path]++
+			m.status.Warningf(statusTTLDefault, "Retrying %s", track.DisplayName())
+			return m.playTrack(track), true
+		}
+	}
+	if _, ok := m.playlist.PeekNext(); !ok {
+		return nil, false
+	}
+	m.err = nil
+	m.status.Warningf(statusTTLDefault, "Skipped %s", track.DisplayName())
+	return m.nextTrack(), true
+}
+
+// SetErrorPolicy sets what happens when a track fails to start: "skip",
+// "retry" or "stop".
+func (m *Model) SetErrorPolicy(policy string) { m.errorPolicy = policy }

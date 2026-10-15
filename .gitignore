@@ -15,5 +15,10 @@ docs/ideas.md
 /config.backup.toml
 .env
 .github/workflows/contextowl-changelog.yml
-/gui/
 coverage.out
+
+/guiamp
+/build/
+
+# Kalulu builds
+/kalulu

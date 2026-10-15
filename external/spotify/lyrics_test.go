@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -95,7 +96,7 @@ func TestParseColorLyrics(t *testing.T) {
 				t.Fatalf("got %d lines, want %d", len(got), len(tt.want))
 			}
 			for i, line := range got {
-				if line != tt.want[i] {
+				if !reflect.DeepEqual(line, tt.want[i]) {
 					t.Errorf("line[%d] = %+v, want %+v", i, line, tt.want[i])
 				}
 			}

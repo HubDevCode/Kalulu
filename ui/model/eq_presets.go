@@ -40,3 +40,12 @@ func EQPresetByName(name string) (EQPreset, bool) {
 	}
 	return EQPreset{}, false
 }
+
+// EQPresetNames returns the names of the built-in presets in display order.
+func EQPresetNames() []string {
+	names := make([]string, len(eqPresets))
+	for i, p := range eqPresets {
+		names[i] = p.Name
+	}
+	return names
+}

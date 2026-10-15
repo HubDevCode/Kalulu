@@ -316,7 +316,10 @@ type Model struct {
 	// list reported. The runtime snapshot shows it.
 	audioDevice string
 	// Core playback
-	player        player.Engine
+	player player.Engine
+	// errorPolicy and retried decide what a failed track start does.
+	errorPolicy   string
+	retried       map[string]int
 	playlist      *playlist.Playlist
 	configSaver   ConfigSaver
 	vis           *ui.Visualizer

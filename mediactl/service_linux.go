@@ -214,7 +214,7 @@ func newService(conn *dbus.Conn, send func(tea.Msg)) (*Service, error) {
 
 	propsSpec := map[string]map[string]*prop.Prop{
 		"org.mpris.MediaPlayer2": {
-			"Identity":            {Value: "Cliamp", Writable: false, Emit: prop.EmitTrue},
+			"Identity":            {Value: "Kalulu", Writable: false, Emit: prop.EmitTrue},
 			"CanQuit":             {Value: true, Writable: false, Emit: prop.EmitTrue},
 			"CanRaise":            {Value: false, Writable: false, Emit: prop.EmitTrue},
 			"HasTrackList":        {Value: false, Writable: false, Emit: prop.EmitTrue},

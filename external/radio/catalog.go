@@ -29,6 +29,7 @@ type CatalogStation struct {
 	Bitrate     int    `json:"bitrate"`
 	Votes       int    `json:"votes"`
 	Homepage    string `json:"homepage"`
+	Favicon     string `json:"favicon"`
 }
 
 // Country is one entry of the directory's country index.

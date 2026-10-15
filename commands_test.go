@@ -346,7 +346,7 @@ func TestVersionFlag(t *testing.T) {
 			if err := app.Run(t.Context(), []string{"cliamp", tt.arg}); err != nil {
 				t.Fatalf("Run(%s) error = %v", tt.arg, err)
 			}
-			if got := out.String(); got != "cliamp version "+want+"\n" {
+			if got := out.String(); got != "kalulu version "+want+"\n" {
 				t.Errorf("Run(%s) printed %q, want version %q", tt.arg, got, want)
 			}
 		})

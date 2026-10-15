@@ -123,3 +123,16 @@ func TestCleanQuery(t *testing.T) {
 		}
 	}
 }
+
+func TestParseEnhancedWords(t *testing.T) {
+	lines := parseLRC("[00:12.00]<00:12.00>Hello <00:12.50>dear <00:13.20>world\n[00:15.00]plain line")
+	if len(lines) != 2 {
+		t.Fatalf("lines = %d", len(lines))
+	}
+	if lines[0].Text != "Hello dear world" || len(lines[0].Words) != 3 || lines[0].Words[1].Start != 12500*time.Millisecond {
+		t.Fatalf("line 0 = %+v", lines[0])
+	}
+	if lines[1].Text != "plain line" || lines[1].Words != nil {
+		t.Fatalf("line 1 = %+v", lines[1])
+	}
+}

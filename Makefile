@@ -1,13 +1,15 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
-BINARY  ?= cliamp
-LDFLAGS := -s -w -X main.version=$(VERSION)
+BINARY  ?= kalulu
+PREFIX  ?= $(HOME)/.local
+KALULU_VERSION ?= 2.5.0
+LDFLAGS := -s -w -X main.version=$(VERSION) -X github.com/bjarneo/cliamp/gui.KaluluVersion=$(KALULU_VERSION)
 
 # CI installs these versions through make tools. Bump STATICCHECK_VERSION
 # together with the go line in go.mod and mise.toml.
 STATICCHECK_VERSION ?= v0.6.1
 GOVULNCHECK_VERSION ?= v1.1.4
 
-.PHONY: build test vet lint staticcheck tools fmt fmt-check tidy-check coverage security ci check clean install
+.PHONY: build test vet lint staticcheck tools fmt fmt-check tidy-check coverage security ci check clean install uninstall appimage preview
 
 build:
 	go build -trimpath -ldflags="$(LDFLAGS)" -o $(BINARY) .
@@ -66,6 +68,27 @@ check: fmt vet test
 clean:
 	rm -f $(BINARY)
 
+# install puts the binary, the desktop entry, the icon and the AppStream
+# metadata under PREFIX (default ~/.local; use PREFIX=/usr/local with sudo
+# for a system install), so Kalulu shows in the application menu.
 install: build
-	install -d $(HOME)/.local/bin
-	install -m 755 $(BINARY) $(HOME)/.local/bin/$(BINARY)
+	install -Dm755 $(BINARY) $(DESTDIR)$(PREFIX)/bin/$(BINARY)
+	install -Dm644 packaging/kalulu.desktop $(DESTDIR)$(PREFIX)/share/applications/kalulu.desktop
+	install -Dm644 packaging/kalulu.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/512x512/apps/kalulu.png
+	install -Dm644 packaging/io.kalulu.Kalulu.metainfo.xml $(DESTDIR)$(PREFIX)/share/metainfo/io.kalulu.Kalulu.metainfo.xml
+	-update-desktop-database $(DESTDIR)$(PREFIX)/share/applications >/dev/null 2>&1
+
+uninstall:
+	rm -f $(DESTDIR)$(PREFIX)/bin/$(BINARY) \
+		$(DESTDIR)$(PREFIX)/share/applications/kalulu.desktop \
+		$(DESTDIR)$(PREFIX)/share/icons/hicolor/512x512/apps/kalulu.png \
+		$(DESTDIR)$(PREFIX)/share/metainfo/io.kalulu.Kalulu.metainfo.xml
+
+# appimage builds a portable Kalulu AppImage; see packaging/appimage/build.sh.
+appimage:
+	VERSION=$(VERSION) packaging/appimage/build.sh
+
+# preview renders the window offscreen to build/preview/*.png.
+preview:
+	mkdir -p build/preview
+	GUIAMP_PREVIEW=$(CURDIR)/build/preview go test ./gui -run TestPreview -count=1

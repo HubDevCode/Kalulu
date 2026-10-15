@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.kalulu.Kalulu</id>
+  <name>Kalulu</name>
+  <summary>Modern graphical music player, formerly GuiAmp, a graphical fork of cliamp</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <launchable type="desktop-id">kalulu.desktop</launchable>
+  <description>
+    <p>
+      Kalulu plays local files, internet radio, podcasts, HTTP and HLS streams
+      and the catalogs of Spotify, Qobuz, Tidal, YouTube Music, SoundCloud,
+      Mixcloud, Navidrome, Jellyfin, Plex, Emby, Lyrion and Audiobookshelf.
+      It has a 10-band equalizer, synced lyrics, visualizers, Lua plugins,
+      MPRIS media controls and a remote control socket.
+    </p>
+  </description>
+  <url type="homepage">https://github.com/HubDevCode/Kalulu</url>
+  <url type="bugtracker">https://github.com/HubDevCode/Kalulu/issues</url>
+  <releases>
+    <release version="2.5.0" date="2026-10-16"/>
+  </releases>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Audio</category>
+    <category>Player</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+</component>

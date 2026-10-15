@@ -246,6 +246,10 @@ func TestLivePrefetchPositionTracksConsumedAudio(t *testing.T) {
 }
 
 func TestLivePrefetchCloseStopsBufferedWriter(t *testing.T) {
+	// The source must outlast the buffer, so keep the buffer short.
+	old := time.Duration(networkBuffer.Load())
+	SetNetworkBuffer(4 * time.Second)
+	t.Cleanup(func() { networkBuffer.Store(int64(old)) })
 	src := &gatedLiveStreamer{samples: make([][2]float64, 5000)}
 	p := newLivePrefetchStreamer(src, 1000)
 	waitForLiveSamples(t, p, len(p.buf))

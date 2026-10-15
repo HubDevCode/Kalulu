@@ -18,7 +18,7 @@ labels: bug
 
 ## Environment
 
-- cliamp version (`cliamp --version`):
+- Kalulu version (Settings → Updates, or `kalulu --version`):
 - OS:
 - Audio backend (PipeWire / PulseAudio / ALSA):
 - Provider(s) involved:

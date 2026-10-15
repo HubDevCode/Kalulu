@@ -3,6 +3,7 @@ package player
 import (
 	"context"
 	"fmt"
+	"github.com/bjarneo/cliamp/applog"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -61,6 +62,8 @@ type Player struct {
 	playing         atomic.Bool
 	paused          atomic.Bool
 	mono            atomic.Bool
+	balance         atomic.Uint64 // -1 (left) .. +1 (right) as Float64bits
+	normalize       atomic.Bool
 	resampleQuality int
 	bitDepth        int // 16 or 32
 	tapBufferFrames int
@@ -86,6 +89,16 @@ type Player struct {
 
 	streamMetaResolver StreamMetadataResolver // optional: API-based now-playing for streams without ICY
 	metaCancel         context.CancelFunc     // cancels the active metadata poller; guarded by mu
+
+	// Transitions (crossfade and DJ mix). planner is guarded by mu.
+	planner        TransitionPlanner
+	transitionLead atomic.Int64 // time.Duration
+	lastTransition atomic.Value // TransitionEvent
+	// silence holds the *silenceConfig of the start trim.
+	silence atomic.Value
+	// tailPipeline is the outgoing track that still plays inside a mix.
+	// Guarded by mu.
+	tailPipeline *trackPipeline
 }
 
 // StreamMetadataResolver matches a stream URL to a now-playing fetcher for
@@ -131,7 +144,12 @@ func New(q Quality) (*Player, error) {
 	}
 	p.volMin.Store(math.Float64bits(-50))
 	p.speed.Store(math.Float64bits(1.0))
-	p.gapless = &gaplessStreamer{}
+	p.gapless = &gaplessStreamer{sr: sr}
+	p.gapless.clock = p.positionAndDurationLocked
+	p.gapless.onTailDone = p.closeTail
+	p.gapless.onMix = func(t Transition) {
+		p.lastTransition.Store(TransitionEvent{Transition: t, Started: time.Now()})
+	}
 	// Suspend the speaker immediately; the ALSA audio callback goroutine
 	// burns ~2% CPU even on silence. Resume is called on every track start.
 	//
@@ -144,18 +162,42 @@ func New(q Quality) (*Player, error) {
 		return nil, fmt.Errorf("audio output unavailable: %w%s", err, audioOutputHint())
 	}
 	p.suspended = true
-	p.gapless.onSwap = func(token uint64) {
+	p.gapless.onSwap = func(token uint64, keepOld bool) {
 		// Called from audio thread (goroutine) when gapless transition occurs.
 		// Swap current ← nextPipeline and close the old one. The API metadata
 		// poller is intentionally not restarted here: gapless advance is for
 		// finite tracks, while resolver-backed streams (NTS, FIP) are infinite
 		// live radio that is never preloaded as a gapless next track.
-		p.handleGaplessSwap(token)
+		p.handleGaplessSwap(token, keepOld)
 	}
 	return p, nil
 }
 
-func (p *Player) handleGaplessSwap(token uint64) {
+// closeTail releases the outgoing track of a finished or dropped mix.
+func (p *Player) closeTail() {
+	p.mu.Lock()
+	tail := p.tailPipeline
+	p.tailPipeline = nil
+	p.mu.Unlock()
+	if tail != nil {
+		go tail.close()
+	}
+}
+
+// takeTail detaches the tail pipeline for a manual change, interrupting a
+// pipe decoder that may block the audio goroutine.
+func (p *Player) takeTail() *trackPipeline {
+	p.mu.Lock()
+	tail := p.tailPipeline
+	p.tailPipeline = nil
+	p.mu.Unlock()
+	if tail != nil {
+		tail.interrupt()
+	}
+	return tail
+}
+
+func (p *Player) handleGaplessSwap(token uint64, keepOld bool) {
 	p.mu.Lock()
 	next := p.nextPipeline
 	if next == nil || next.gaplessToken != token {
@@ -174,9 +216,19 @@ func (p *Player) handleGaplessSwap(token uint64) {
 			p.lastPlayedDuration = old.knownDuration
 		}
 	}
+	var oldTail *trackPipeline
+	if keepOld && old != nil {
+		// The old track keeps playing inside the mix; closeTail releases it.
+		oldTail = p.tailPipeline
+		p.tailPipeline = old
+		old = nil
+	}
 	p.mu.Unlock()
 	if old != nil {
 		go old.close()
+	}
+	if oldTail != nil {
+		go oldTail.close()
 	}
 	p.gaplessAdvance.Store(true)
 }
@@ -220,11 +272,23 @@ func (p *Player) PlayAtForGeneration(path string, knownDuration, offset time.Dur
 // playAt builds the pipeline for path and plays it. A generation of 0 plays
 // it without the check.
 func (p *Player) playAt(path string, knownDuration, offset time.Duration, generation uint64) error {
+	// A skip to the track that is already preloaded starts it at once
+	// instead of opening it again.
+	if tp := p.takePreloaded(path, offset); tp != nil {
+		return p.playPipelineForGeneration(tp, generation)
+	}
+	start := time.Now()
 	tp, err := p.buildSource(path, knownDuration, offset, true)
 	if err != nil {
 		return err
 	}
-	return p.playPipelineForGeneration(tp, generation)
+	built := time.Now()
+	if offset == 0 {
+		p.trimLeadingSilence(tp)
+	}
+	err = p.playPipelineForGeneration(tp, generation)
+	applog.Debug("player: %s opened in %v, silence trim %v, started %v", path, built.Sub(start), time.Since(built), time.Since(start))
+	return err
 }
 
 // playPipelineForGeneration wires a ready-to-play trackPipeline into the
@@ -248,6 +312,7 @@ func (p *Player) playPipelineForGeneration(tp *trackPipeline, generation uint64)
 	active := p.current
 	p.mu.Unlock()
 
+	var oldTail *trackPipeline
 	if started {
 		// A nav/pipe decoder may be blocked in Stream while the speaker mutex is
 		// held. Interrupt it first so source replacement can acquire the mutex.
@@ -255,6 +320,7 @@ func (p *Player) playPipelineForGeneration(tp *trackPipeline, generation uint64)
 			p.gapless.SetNext(nil)
 			active.interrupt()
 		}
+		oldTail = p.takeTail()
 		// Lock the speaker so the goroutine finishes any in-progress Stream()
 		// call before we swap the source and unpause. The ctrl.Paused write
 		// must happen under the speaker lock because the audio thread reads it
@@ -289,7 +355,7 @@ func (p *Player) playPipelineForGeneration(tp *trackPipeline, generation uint64)
 		}
 
 		p.tap = newTap(s, p.tapBufferFrames, int(p.sr), p.speakerBufferFrames)
-		s = &volumeStreamer{s: p.tap, vol: &p.volume, mono: &p.mono, cachedDB: math.NaN()}
+		s = &volumeStreamer{s: p.tap, vol: &p.volume, mono: &p.mono, balance: &p.balance, normalize: &p.normalize, sr: float64(p.sr), cachedDB: math.NaN()}
 		ctrl := &beep.Ctrl{Streamer: s}
 		p.ctrl = ctrl
 		p.started = true
@@ -309,8 +375,29 @@ func (p *Player) playPipelineForGeneration(tp *trackPipeline, generation uint64)
 	p.startStreamMetadata(tp.path)
 	// Close old resources asynchronously to avoid blocking the caller
 	// (UI thread) on slow Close() operations (ffmpeg wait, HTTP teardown).
-	go closePipelines(oldCurrent, oldNext)
+	go closePipelines(oldCurrent, oldNext, oldTail)
 	return nil
+}
+
+// takePreloaded detaches the preloaded pipeline when it holds path from the
+// start, so a manual skip can play it.
+func (p *Player) takePreloaded(path string, offset time.Duration) *trackPipeline {
+	if offset > 0 {
+		return nil
+	}
+	speaker.Lock()
+	p.mu.Lock()
+	tp := p.nextPipeline
+	if tp == nil || tp.path != path {
+		p.mu.Unlock()
+		speaker.Unlock()
+		return nil
+	}
+	p.nextPipeline = nil
+	p.gapless.SetNext(nil)
+	p.mu.Unlock()
+	speaker.Unlock()
+	return tp
 }
 
 // BeginPreload invalidates older preload work and returns the current token.
@@ -333,6 +420,11 @@ func (p *Player) PreloadForGeneration(path string, knownDuration time.Duration, 
 // preloadPipelineForGeneration queues a ready trackPipeline for gapless
 // transition, unless generation is not 0 and no longer current.
 func (p *Player) preloadPipelineForGeneration(tp *trackPipeline, generation uint64) error {
+	if generation != 0 && p.preloadGen.Load() != generation {
+		go tp.close()
+		return nil
+	}
+	plan := p.planNext(tp)
 	// Lock speaker to atomically swap the gapless next stream, ensuring no
 	// in-flight transition reads from the old pipeline we're about to close.
 	speaker.Lock()
@@ -347,7 +439,7 @@ func (p *Player) preloadPipelineForGeneration(tp *trackPipeline, generation uint
 	p.nextPipeline = tp
 	// Keep Player's pipeline state and gapless' token registration atomic with
 	// respect to the asynchronous transition callback.
-	tp.gaplessToken = p.gapless.SetNext(tp.stream)
+	tp.gaplessToken = p.gapless.SetNextPlan(tp.stream, plan)
 	p.mu.Unlock()
 	speaker.Unlock()
 
@@ -418,6 +510,7 @@ func (p *Player) Stop() {
 		p.gapless.SetNext(nil)
 		active.interrupt()
 	}
+	oldTail := p.takeTail()
 
 	// Lock speaker to ensure the goroutine finishes any in-progress Stream()
 	// call, then clear the source and pause. After unlock, the speaker will
@@ -442,7 +535,7 @@ func (p *Player) Stop() {
 	// Now safe to close decoder resources: speaker cannot be reading them.
 
 	p.stopStreamMetadata()
-	closePipelines(oldCurrent, oldNext)
+	closePipelines(oldCurrent, oldNext, oldTail)
 
 	p.suspendSpeaker()
 }
@@ -802,6 +895,27 @@ func (p *Player) ToggleMono() {
 func (p *Player) Mono() bool {
 	return p.mono.Load()
 }
+
+// SetMono turns the mono downmix on or off.
+func (p *Player) SetMono(on bool) { p.mono.Store(on) }
+
+// SetBalance moves the stereo image: -1 is only left, +1 only right.
+func (p *Player) SetBalance(b float64) {
+	if math.IsNaN(b) {
+		return
+	}
+	p.balance.Store(math.Float64bits(max(-1, min(1, b))))
+}
+
+// Balance returns the L/R balance in [-1, 1].
+func (p *Player) Balance() float64 { return math.Float64frombits(p.balance.Load()) }
+
+// SetNormalize turns the loudness normalization on or off. It brings every
+// track toward the same perceived level, with a limiter against clipping.
+func (p *Player) SetNormalize(on bool) { p.normalize.Store(on) }
+
+// Normalize reports whether loudness normalization is on.
+func (p *Player) Normalize() bool { return p.normalize.Load() }
 
 // SetEQBand sets a single EQ band's gain in dB, clamped to [-12, +12].
 // A NaN gain is ignored.
