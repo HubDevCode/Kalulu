@@ -32,7 +32,7 @@ Legenda: `[x]` fatto e verificato · `[~]` parziale · `[ ]` da fare
 
 ### 11. Controlli audio
 - [x] Togliere Stereo/Mono dalla barra inferiore; resta in Equalizzatore e Impostazioni
-- [ ] Normalizzazione volume e bilanciamento L/R nel motore
+- [x] Normalizzazione volume (con limiter) e bilanciamento L/R nel motore, nella pagina Equalizzatore
 
 ## Fase 2 — Audio e streaming
 
@@ -67,7 +67,7 @@ Legenda: `[x]` fatto e verificato · `[~]` parziale · `[ ]` da fare
 
 ### 6–7. Interfaccia, colori dinamici, personalizzazione
 - [x] Palette dinamica dalla copertina con contrasto garantito e transizione graduale
-- [ ] Icone riviste
+- [x] Icone riviste (DJ Mixer: cuffie, Insieme: gruppo)
 - [x] Personalizzazione: sezioni barra laterale, densità, dimensione testo, animazioni, pannelli
 - [x] Ripristino predefiniti (con conferma)
 
@@ -76,7 +76,7 @@ Legenda: `[x]` fatto e verificato · `[~]` parziale · `[ ]` da fare
 - [x] Nessuna sezione vuota per servizi non configurati
 
 ### 10. Impostazioni centralizzate
-- [ ] Categorie richieste, un solo punto per ogni opzione
+- [x] Categorie: Generale, Personalizzazione, Home e servizi, Notifiche, Riproduzione, Transizioni, Audio, Testi, Visualizer, Rete, Download, Prestazioni, Plugin, Avanzate, Aggiornamenti, Informazioni; ogni opzione in un solo punto
 - [x] Esportazione/importazione versionata e validata (preferenze Kalulu + config.toml)
 
 ### 12–13. Caricamento e prestazioni
@@ -91,14 +91,15 @@ Legenda: `[x]` fatto e verificato · `[~]` parziale · `[ ]` da fare
 - [x] Verifica di provenienza e checksum prima dell'installazione
 
 ### 14. Ascolto condiviso in LAN
-- [ ] Stanza con codice (scoperta in LAN via broadcast UDP) o IP:porta
-- [ ] Ruoli Owner / Editor / Su richiesta / Ascoltatore, modificabili a sessione aperta
-- [ ] Sincronizzazione brano, posizione, pausa; correzione graduale della deriva
-- [ ] Richieste di brani da approvare
+- [x] Stanza con codice (scoperta in LAN via broadcast UDP) o IP:porta
+- [x] Ruoli Owner / Editor / Su richiesta / Ascoltatore, modificabili a sessione aperta
+- [x] Sincronizzazione brano, posizione, pausa; correzione graduale della deriva
+- [x] Richieste di brani da approvare
+- [x] Verificato dal vivo con due istanze: ospite allineato entro 0,05–0,12 s
 - Decisione: ogni client riproduce autonomamente la stessa sorgente (YouTube,
   radio, podcast, URL). Per i file locali dell'Owner, l'Owner li serve in HTTP
   sulla LAN agli ospiti autenticati. Niente esposizione su Internet.
 
 ## Fase 5 — Pulizia e verifica finale
-- [ ] Rimozione di schermate e controlli duplicati (pagina Testi separata, mono nella barra)
-- [ ] Documentazione, test, criteri di completamento della sezione 19
+- [x] Rimozione di schermate e controlli duplicati (pagina Testi separata, mono nella barra)
+- [x] Documentazione (README, docs/gui.md), test, criteri di completamento della sezione 19
