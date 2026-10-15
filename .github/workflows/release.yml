@@ -41,7 +41,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            --title "Kalulu ${GITHUB_REF_NAME#v}" \
-            --generate-notes \
-            build/appimage/Kalulu-*.AppImage build/appimage/SHA256SUMS
+          files="build/appimage/Kalulu-*.AppImage build/appimage/SHA256SUMS"
+          # A tag moved to a fixed commit replaces the files of its release.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" $files --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" --title "Kalulu ${GITHUB_REF_NAME#v}" --generate-notes $files
+          fi

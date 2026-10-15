@@ -5,83 +5,92 @@
 <h1 align="center">Kalulu</h1>
 
 <p align="center">
-  Un lettore musicale moderno, leggero e completo per Linux.<br>
-  YouTube Music, radio, podcast, file locali e i tuoi servizi, con DJ Mixer, testi sincronizzati parola per parola e ascolto condiviso in rete locale.
+  A modern, light and complete music player for Linux.<br>
+  YouTube Music, radio, podcasts, local files and your own services, with a DJ Mixer, word-by-word synced lyrics and listening together on your local network.
 </p>
 
 <p align="center">
-  <b>Versione 2.5.0</b> · ex GuiAmp · fork grafico di <a href="https://github.com/bjarneo/cliamp">cliamp</a> · licenza GPL-3.0
+  <b>Version 2.5.0</b> · formerly GuiAmp · a graphical fork of <a href="https://github.com/bjarneo/cliamp">cliamp</a> · GPL-3.0
 </p>
 
-![La Home di Kalulu](docs/images/kalulu-home.png)
+![The Kalulu Home](docs/images/kalulu-home.png)
 
-## Perché Kalulu
+## Why Kalulu
 
-Kalulu unisce il motore di [cliamp](https://github.com/bjarneo/cliamp), un lettore da terminale veloce e collaudato, con una finestra moderna. Non serve nessun account: la Home propone musica di YouTube Music in base al paese, e ogni scheda parte con un clic. Se hai già dei servizi (Navidrome, Jellyfin, Plex, Spotify, Tidal, Qobuz…) li trovi nella Libreria.
+Kalulu puts a modern window on the engine of [cliamp](https://github.com/bjarneo/cliamp), a fast and well-tested terminal player. It needs no account: Home suggests YouTube Music for your country, and every card plays with one click. Services you already use (Navidrome, Jellyfin, Plex, Spotify, Tidal, Qobuz…) show up in the Library.
 
-![Il player con i testi sincronizzati](docs/images/kalulu-player.png)
+![The player with synced lyrics](docs/images/kalulu-player.png)
 
-## Funzioni
+## Features
 
-**Scoprire e ascoltare**
-- Home modulare: mix fatti per te in base a cosa ascolti, YouTube Music, classifiche, generi e mood, radio e podcast del tuo paese. Scegli tu sezioni e ordine.
-- Ricerca con suggerimenti mentre scrivi. Brani, artisti, album, video e playlist.
-- Autoplay: quando la coda finisce, continua con brani simili.
-- Radio di tutto il mondo ([Radio Browser](https://www.radio-browser.info)) e podcast delle classifiche Apple.
-- File locali, cartelle, URL, playlist M3U/PLS, feed. Basta trascinarli sulla finestra.
+**Discover and listen**
+- Modular Home: mixes made for you from what you listen to, YouTube Music, charts, moods and genres, and the radio and podcasts of your country. You pick the sections and their order.
+- Search with suggestions as you type: songs, artists, albums, videos and playlists.
+- Autoplay: when the queue ends, similar songs keep playing.
+- Radio from all over the world ([Radio Browser](https://www.radio-browser.info)) and the Apple podcast charts.
+- Local files, folders, URLs, M3U and PLS playlists and feeds. Just drop them on the window.
 
 **Audio**
-- Avvio rapido: i brani YouTube partono dall'URL audio diretto, e i successivi in coda vengono preparati in anticipo.
-- Qualità di streaming Opus: alta, bilanciata, risparmio dati o automatica in base alla connessione.
-- Precaricamento senza pause tra i brani, salto del silenzio iniziale e finale, ripresa automatica dagli errori.
-- Equalizzatore a 10 bande con preset, normalizzazione del volume, bilanciamento L/R, mono e velocità.
+- Fast start: YouTube tracks play from their direct audio URL, and the next tracks of the queue are prepared in advance.
+- Opus streaming quality: high, balanced, data saver, or automatic from your connection.
+- Gapless preload, skipping of the silence at the start and end of tracks, and recovery from errors.
+- 10-band equalizer with presets, loudness normalization, L/R balance, mono and speed.
 
 **DJ Mixer**
-- Analizza tempo, battute, frasi, tonalità ed energia di ogni brano.
-- Transizioni a tempo come un DJ: allineamento delle battute, adattamento del tempo, filtri, eco, dissolvenze.
-- Preset Smooth, Beat Match, Long Mix, Quick Mix e Manuale, con durata, intensità e anteprima.
+- Analyses the tempo, beats, phrases, key and energy of every track.
+- Mixes like a DJ: beat alignment, tempo matching, filters, echo and fades.
+- Presets Smooth, Beat Match, Long Mix, Quick Mix and Manual, with length, intensity and a preview.
 
-**Testi**
-- Testi sincronizzati parola per parola, stile karaoke, con animazioni fluide e schermo intero.
-- Nove fonti gratuite interrogate insieme, senza account: LyricsPlus, lrc.red e Paxsenix (testi Apple Music parola per parola), LRCLIB, BetterLyrics Unison, NetEase, QQ Music, Kugou e lyrics.ovh. Kalulu tiene il risultato migliore e lo salva.
-- L'ingranaggio sotto i testi permette di cercare di nuovo, scegliere la fonte e regolare l'offset.
+**Lyrics**
+- Karaoke-style lyrics synced word by word, with smooth animation and full screen.
+- Nine free sources asked at once, with no account: LyricsPlus, lrc.red and Paxsenix (Apple Music lyrics timed per word), LRCLIB, BetterLyrics Unison, NetEase, QQ Music, Kugou and lyrics.ovh. Kalulu keeps the best answer and caches it.
+- The gear under the lyrics looks them up again, picks the source and sets the offset.
 
-**Interfaccia**
-- I colori della finestra seguono la copertina del brano, con contrasto sempre leggibile.
-- Visualizer con la sfera NCS che pulsa a tempo, più barre, specchio, radiale e altri stili.
-- Densità, dimensione del testo, barra laterale, animazioni ridotte: tutto personalizzabile.
-- Icona nel tray: chiudendo la finestra la musica continua.
-- Riapre la coda e il brano dove li avevi lasciati.
-- Un'unica istanza: un secondo avvio porta in primo piano la finestra e le passa i file.
-- Interfaccia in italiano e in inglese.
+**Interface**
+- The window colors follow the cover of the playing track, always with readable contrast.
+- Visualizer with the NCS sphere that pulses on the beat, plus bars, mirror, radial and more.
+- Density, text size, sidebar and reduced motion are all yours to set.
+- Tray icon: closing the window keeps the music playing.
+- Reopens the queue and the track where you left them.
+- Single instance: a second launch brings the window forward and hands it the files.
+- Italian and English interface.
 
-**Ascolto condiviso**
-- Crea una stanza con un codice e ascoltate insieme sulla rete locale, sincronizzati al decimo di secondo.
-- Ruoli: Owner, Editor, Su richiesta (propone brani da approvare) e Ascoltatore.
-- Nessuna esposizione su Internet: la stanza risponde solo agli indirizzi della LAN.
+**Listening together**
+- Open a room with a code and listen together on your local network, in sync within a tenth of a second.
+- Roles: Owner, Editor, On request (suggests tracks for approval) and Listener.
+- Never exposed to the Internet: the room answers LAN addresses only.
 
-**Leggero**
-- Circa 300 MB di RAM durante la riproduzione, stabili anche dopo ore di ascolto.
-- Copertine tenute alla dimensione in cui sono mostrate. Visualizer e animazioni si fermano quando la finestra è nascosta.
+**Light**
+- About 300 MB of RAM while playing, steady after hours of listening.
+- Covers are kept at the size they are shown. The visualizer and animations stop when the window is hidden.
 
-**Aggiornamenti**
-- Controlla le release di questo repository. Scarica l'AppImage e la installa solo se coincide con il suo `SHA256SUMS`.
+**Updates**
+- Checks the releases of this repository. It downloads the AppImage and installs it only when it matches its `SHA256SUMS`.
 
-![Equalizzatore e audio](docs/images/kalulu-equalizer.png)
+![Equalizer and audio](docs/images/kalulu-equalizer.png)
 
-## Installazione
+## Install
 
-### Requisiti
+### AppImage
 
-| Cosa | Perché |
+Download `Kalulu-<version>-x86_64.AppImage` from the [Releases](https://github.com/HubDevCode/Kalulu/releases) page, make it executable and run it:
+
+```sh
+chmod +x Kalulu-*.AppImage
+./Kalulu-*.AppImage
+```
+
+### Requirements
+
+| What | Why |
 | --- | --- |
 | `yt-dlp` | YouTube, YouTube Music, SoundCloud, Bandcamp |
-| `ffmpeg` | AAC, Opus, ALAC, flussi di rete e analisi del DJ Mixer |
-| `pipewire-alsa` o `pulseaudio-alsa` | uscita audio su PipeWire / PulseAudio |
+| `ffmpeg` | AAC, Opus, ALAC, network streams and the DJ Mixer analysis |
+| `pipewire-alsa` or `pulseaudio-alsa` | audio output on PipeWire or PulseAudio |
 
-### Compilare dai sorgenti
+### Build from source
 
-Servono Go (la versione indicata in `go.mod`), un compilatore C e le librerie di sviluppo di ALSA, OpenGL, X11 e Wayland.
+You need Go (the version in `go.mod`), a C compiler and the development files of ALSA, OpenGL, X11 and Wayland.
 
 ```sh
 # Arch, Manjaro, EndeavourOS
@@ -94,81 +103,79 @@ sudo apt install golang gcc pkg-config libasound2-dev libgl1-mesa-dev xorg-dev l
 sudo dnf install golang gcc alsa-lib-devel mesa-libGL-devel libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel libXxf86vm-devel libxkbcommon-devel wayland-devel flac-devel libvorbis-devel libogg-devel mpg123-devel yt-dlp ffmpeg
 ```
 
-Poi:
+Then:
 
 ```sh
 git clone https://github.com/HubDevCode/Kalulu.git
 cd Kalulu
-make build      # crea ./kalulu
-make install    # in ~/.local/bin, con voce nel menu applicazioni e icona
+make build      # builds ./kalulu
+make install    # into ~/.local/bin, with an application menu entry and icon
 ```
 
-Le dipendenze di openSUSE, Void e Alpine sono in [docs/gui.md](docs/gui.md).
+The packages for openSUSE, Void and Alpine, and the Flatpak manifest, are in [docs/gui.md](docs/gui.md). `make appimage` builds the AppImage and its `SHA256SUMS`.
 
-### AppImage e Flatpak
-
-`make appimage` crea un `Kalulu-<versione>-<arch>.AppImage` portabile, con il suo file `SHA256SUMS`. Per il Flatpak c'è `packaging/flatpak/io.kalulu.Kalulu.yml`. I dettagli sono in [docs/gui.md](docs/gui.md).
-
-## Uso
+## Usage
 
 ```sh
-kalulu                          # apre la finestra
-kalulu ~/Musica/album           # apre la finestra e riproduce una cartella
-kalulu https://…                # un URL, una playlist, un feed
-kalulu --background             # parte direttamente nel tray
-kalulu --room "Festa"           # apre una stanza di ascolto condiviso
-kalulu --join HOST:PORTA/CODICE # entra in una stanza
-kalulu --tui                    # l'interfaccia da terminale di cliamp
-kalulu -d                       # senza interfaccia, controllato dal socket
+kalulu                          # open the window
+kalulu ~/Music/album            # open the window and play a folder
+kalulu https://…                # a URL, a playlist, a feed
+kalulu --background             # start in the tray
+kalulu --room "Party"           # open a shared listening room
+kalulu --join HOST:PORT/CODE    # join a room
+kalulu --tui                    # the cliamp terminal interface
+kalulu -d                       # headless, controlled through the socket
 ```
 
-Premi `F1` nella finestra per vedere le scorciatoie da tastiera. Le scorciatoie con una sola lettera non si attivano mai mentre scrivi in una casella di testo.
+Press `F1` in the window for the keyboard shortcuts. Single-letter shortcuts never fire while you type in a text field.
 
-## Configurazione
+## Configuration
 
-Kalulu usa la configurazione di cliamp in `~/.config/cliamp/config.toml`, quindi un'installazione di cliamp esistente funziona subito. Quasi tutto si regola da **Impostazioni**, divise in categorie: Generale, Personalizzazione, Home e servizi, Notifiche, Riproduzione, Transizioni, Audio, Testi, Visualizer, Rete, Download, Prestazioni, Plugin, Avanzate, Aggiornamenti.
+Kalulu reads the cliamp configuration in `~/.config/cliamp/config.toml`, so an existing cliamp setup works at once. Almost everything is in **Settings**, by category: General, Personalization, Home and services, Notifications, Playback, Transitions, Audio, Lyrics, Visualizer, Network, Downloads, Performance, Plugins, Advanced, Updates.
 
-Le preferenze si possono esportare e importare da Impostazioni → Avanzate. I servizi (Navidrome, Jellyfin, Plex, Emby, Spotify, Tidal, Qobuz, SoundCloud, Mixcloud…) si configurano in Impostazioni → Home e servizi. La guida di ogni servizio è nella cartella [docs](docs).
+Settings → Advanced exports and imports your preferences. The services (Navidrome, Jellyfin, Plex, Emby, Spotify, Tidal, Qobuz, SoundCloud, Mixcloud…) are set up in Settings → Home and services, and each one has a guide in [docs](docs).
 
-| Percorso | Contenuto |
+| Path | What it holds |
 | --- | --- |
-| `~/.config/cliamp/config.toml` | configurazione del motore e dei servizi |
-| `~/.config/cliamp/kalulu-session.json` | coda e brano dell'ultima sessione |
-| `~/.config/cliamp/kalulu-crash.log` | rapporto di un eventuale crash |
-| `~/.config/fyne/io.kalulu.Kalulu` | preferenze della finestra |
-| `~/.cache/kalulu` | copertine, analisi DJ, testi |
+| `~/.config/cliamp/config.toml` | the engine and service configuration |
+| `~/.config/cliamp/kalulu-session.json` | the queue and track of the last session |
+| `~/.config/cliamp/kalulu-crash.log` | the report of a crash, if one happens |
+| `~/.config/fyne/io.kalulu.Kalulu` | the window preferences |
+| `~/.cache/kalulu` | covers, DJ analyses and lyrics |
 
-## Documentazione
+## Documentation
 
-- [docs/gui.md](docs/gui.md): la finestra, Discover, DJ Mixer, testi, ascolto condiviso, memoria, installazione.
-- [docs/remote-control.md](docs/remote-control.md): il controllo remoto via socket (API V2).
-- [docs/plugins.md](docs/plugins.md): i plugin Lua di cliamp, che funzionano anche in Kalulu.
-- [docs/configuration.md](docs/configuration.md): tutte le chiavi di `config.toml`.
+- [docs/gui.md](docs/gui.md): the window, Discover, the DJ Mixer, lyrics, listening together, memory, install.
+- [docs/remote-control.md](docs/remote-control.md): remote control over the socket (V2 API).
+- [docs/plugins.md](docs/plugins.md): cliamp Lua plugins, which work in Kalulu too.
+- [docs/configuration.md](docs/configuration.md): every key of `config.toml`.
 
-## Sviluppo
+## Development
 
 ```sh
-make build     # compila ./kalulu
+make build     # build ./kalulu
 make test      # go test ./...
-make preview   # disegna la finestra fuori schermo in build/preview/*.png
+make preview   # render the window offscreen to build/preview/*.png
 ```
 
-Il codice della finestra è nel pacchetto `gui/`. Parla con il motore di cliamp solo tramite le operazioni V2, in `gui_main.go`. Il resto del progetto:
+The window lives in the `gui/` package. It talks to the cliamp engine only through the V2 operations, wired in `gui_main.go`. The other Kalulu packages:
 
-| Pacchetto | Contenuto |
+| Package | What it does |
 | --- | --- |
-| `discover/` | YouTube Music senza account, podcast, radio |
-| `djmix/` | analisi dei brani e pianificazione delle transizioni DJ |
-| `player/` | motore audio, precaricamento, mix, silenzio, qualità, risoluzione rapida di YouTube |
-| `lyrics/` | ricerca dei testi su più fonti, con cache |
-| `share/` | ascolto condiviso in LAN |
+| `discover/` | YouTube Music without an account, podcasts, radio |
+| `djmix/` | track analysis and DJ transition planning |
+| `player/` | audio engine: preload, mixing, silence, quality, fast YouTube resolution |
+| `lyrics/` | lyrics search over many sources, with a cache |
+| `share/` | listening together on the LAN |
 
-## Riconoscimenti
+Pushing a `v*` tag builds the AppImage and publishes the release.
 
-Kalulu è un fork di [cliamp](https://github.com/bjarneo/cliamp) di Bjarne Øverli. Il motore, i servizi e i plugin vengono da lì: grazie! I testi arrivano dai servizi gratuiti citati sopra, e la scoperta musicale da YouTube Music, [Radio Browser](https://www.radio-browser.info) e dalle classifiche Apple Podcasts.
+## Credits
 
-## Licenza
+Kalulu is a fork of [cliamp](https://github.com/bjarneo/cliamp) by Bjarne Øverli. The engine, the services and the plugins come from there: thank you! The lyrics come from the free services listed above, and music discovery from YouTube Music, [Radio Browser](https://www.radio-browser.info) and the Apple Podcasts charts.
 
-Kalulu è software libero: puoi ridistribuirlo e modificarlo secondo i termini della [GNU General Public License](LICENSE), versione 3 o (a tua scelta) qualsiasi versione successiva.
+## License
 
-Kalulu contiene il codice di cliamp, © Bjarne Øverli, distribuito con licenza MIT. Come richiede quella licenza, il suo avviso originale è conservato in [LICENSES/MIT-cliamp.txt](LICENSES/MIT-cliamp.txt).
+Kalulu is free software: you can redistribute it and modify it under the terms of the [GNU General Public License](LICENSE), version 3 or, at your option, any later version.
+
+Kalulu contains the code of cliamp, © Bjarne Øverli, released under the MIT license. As that license requires, its original notice is kept in [LICENSES/MIT-cliamp.txt](LICENSES/MIT-cliamp.txt).

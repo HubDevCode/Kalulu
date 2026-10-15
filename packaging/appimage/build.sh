@@ -50,6 +50,9 @@ cp "$root/packaging/io.kalulu.Kalulu.metainfo.xml" "$appdir/usr/share/metainfo/"
 cat >"$appdir/AppRun" <<'RUN'
 #!/bin/sh
 here=$(dirname "$(readlink -f "$0")")
+# Kalulu gives the host path back to ffmpeg and yt-dlp (appimage_env.go).
+export KALULU_HOST_LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}"
+export KALULU_APPIMAGE_LIBS=1
 export LD_LIBRARY_PATH="$here/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 exec "$here/usr/bin/kalulu" "$@"
 RUN

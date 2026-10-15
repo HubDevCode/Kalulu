@@ -143,8 +143,27 @@ func isYouTubePage(u string) bool {
 	return false
 }
 
-// ytCacheKey keeps a resolution per page and format profile.
-func ytCacheKey(pageURL string) string { return ytdlFormat() + "|" + pageURL }
+// ytCacheKey keeps a resolution per video and format profile.
+func ytCacheKey(pageURL string) string { return ytdlFormat() + "|" + canonicalYouTube(pageURL) }
+
+// canonicalYouTube turns any YouTube or YouTube Music page of a video into
+// its www.youtube.com watch page. The audio is the same, but the URLs that
+// yt-dlp resolves for music.youtube.com come from a client whose links
+// answer 403 to any reader but yt-dlp itself.
+func canonicalYouTube(pageURL string) string {
+	parsed, err := url.Parse(pageURL)
+	if err != nil {
+		return pageURL
+	}
+	id := parsed.Query().Get("v")
+	if strings.EqualFold(strings.TrimPrefix(parsed.Hostname(), "www."), "youtu.be") {
+		id = strings.Trim(parsed.Path, "/")
+	}
+	if id == "" {
+		return pageURL
+	}
+	return "https://www.youtube.com/watch?v=" + url.QueryEscape(id)
+}
 
 // CachedYT returns a still valid resolution of pageURL.
 func CachedYT(pageURL string) (YTResolved, bool) {
@@ -232,6 +251,7 @@ func resolveYT(ctx context.Context, pageURL string, prio int) (YTResolved, error
 }
 
 func (r *ytResolver) run(ctx context.Context, pageURL string, prio int) (YTResolved, error) {
+	pageURL = canonicalYouTube(pageURL)
 	if h := r.ensureHelper(); h != nil {
 		reply, err := h.ask(ctx, pageURL, ytdlFormat(), ytdlcookies.ForURL(pageURL), prio)
 		if err == nil {

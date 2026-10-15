@@ -69,3 +69,16 @@ func TestResolveYTLive(t *testing.T) {
 	}
 	t.Logf("warm %v", time.Since(start))
 }
+
+func TestCanonicalYouTube(t *testing.T) {
+	for in, want := range map[string]string{
+		"https://music.youtube.com/watch?v=abc&list=RD": "https://www.youtube.com/watch?v=abc",
+		"https://youtu.be/abc":                          "https://www.youtube.com/watch?v=abc",
+		"https://www.youtube.com/watch?v=abc":           "https://www.youtube.com/watch?v=abc",
+		"https://www.youtube.com/playlist?list=PL1":     "https://www.youtube.com/playlist?list=PL1",
+	} {
+		if got := canonicalYouTube(in); got != want {
+			t.Errorf("canonicalYouTube(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
