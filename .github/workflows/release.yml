@@ -80,9 +80,13 @@ jobs:
         env:
           VERSION: ${{ github.ref_name }}
           ISCC: /c/InnoSetup/ISCC.exe
-          # ISCC takes /Q and Windows paths: MSYS2 must not rewrite them.
-          MSYS2_ARG_CONV_EXCL: "*"
-        run: sh packaging/windows/build.sh
+        run: |
+          set -o pipefail
+          # The tail of a failure becomes an annotation, readable without a login.
+          sh -x packaging/windows/build.sh 2>&1 | tee build.log || {
+            echo "::error title=Windows installer::$(tail -n 25 build.log | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')"
+            exit 1
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: windows

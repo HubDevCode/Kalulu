@@ -125,7 +125,8 @@ cat >"$work/version.iss" <<EOF
 #define AppTag "$version"
 #define NumVersion "$major.$minor.$patch.0"
 EOF
-(cd "$work" && ${ISCC:-iscc} /Q kalulu.iss)
+# MSYS2 must not rewrite /Q into a path for ISCC.
+(cd "$work" && MSYS2_ARG_CONV_EXCL='*' ${ISCC:-iscc} /Q kalulu.iss)
 setup=Kalulu-$version-x64-setup.exe
 test -f "$work/$setup"
 (cd "$work" && sha256sum "$setup" >SHA256SUMS)
