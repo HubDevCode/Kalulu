@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/bjarneo/cliamp/internal/httpclient"
+	"github.com/bjarneo/cliamp/internal/sysproc"
 	"github.com/bjarneo/cliamp/internal/ytdlcookies"
 	"github.com/bjarneo/cliamp/playlist"
 
@@ -728,7 +729,7 @@ func ResolveYTDLBatchPageContext(ctx context.Context, pageURL string, start, cou
 		args = append(args, "--playlist-end", strconv.Itoa(end))
 	}
 	args = append(args, "--", pageURL)
-	cmd := exec.CommandContext(ctx, "yt-dlp", args...)
+	cmd := sysproc.CommandContext(ctx, "yt-dlp", args...)
 	cmd.WaitDelay = 3 * time.Second
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
@@ -840,7 +841,7 @@ func DownloadYTDLContext(ctx context.Context, pageURL, saveDir string) (string, 
 		args = append(args, "--cookies-from-browser", browser)
 	}
 	args = append(args, "--", pageURL)
-	cmd := exec.CommandContext(ctx, "yt-dlp", args...)
+	cmd := sysproc.CommandContext(ctx, "yt-dlp", args...)
 	cmd.WaitDelay = 3 * time.Second
 	var stderr strings.Builder
 	cmd.Stderr = &stderr

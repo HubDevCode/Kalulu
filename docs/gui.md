@@ -225,6 +225,25 @@ distribution (`pacman`, `apt`, `dnf` or `zypper`). On `apt` systems yt-dlp
 comes from `pipx`, as the archive version is often too old for YouTube.
 "Don't remind me again" hides the message.
 
+### Windows
+
+`make windows` builds `Kalulu-<version>-x64-setup.exe` and its `SHA256SUMS` with
+`packaging/windows/build.sh`, in an MSYS2 MINGW64 shell with Go, the
+mingw-w64 gcc, pkg-config, flac, libvorbis, libogg and mpg123, and
+[Inno Setup 6](https://jrsoftware.org/isinfo.php). The script header shows
+how to cross-compile it on Linux.
+
+The installer carries `kalulu.exe`, its codec libraries, and the playback
+tools in `tools\`: `yt-dlp.exe`, and `ffmpeg.exe` and `ffprobe.exe` with
+their libraries. Each one is checked against the checksums of its release.
+Kalulu puts `tools\` first in its `PATH`, and the bundled yt-dlp updates
+itself once a day, as YouTube changes often. Kalulu installs for the current
+user by default, in `%LOCALAPPDATA%\Programs\Kalulu`; the installer can also
+install for all users. Settings and data stay in `%APPDATA%\cliamp`.
+
+The in-app updater downloads the new installer, checks it against
+`SHA256SUMS` and runs it silently; the installer starts Kalulu again.
+
 ### Flatpak
 
 `packaging/flatpak/io.kalulu.Kalulu.yml` builds a Flatpak on the

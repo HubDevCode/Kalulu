@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -130,14 +131,18 @@ func (s *settingsView) build() {
 		c.Checked = a.prefs.BoolWithFallback(key, def)
 		return c
 	}
+	desktop := []fyne.CanvasObject{
+		setRow(T("Keep playing in the tray"), T("Closing the window leaves Kalulu in the system tray"), toggle(prefCloseToTray, a.trayHostAvailable(), nil)),
+	}
+	// The Windows installer adds the Start menu entry itself.
+	if runtime.GOOS == "linux" {
+		desktop = append(desktop, container.NewHBox(flatButton(T("Add Kalulu to the application menu"), theme.ComputerIcon(), s.installDesktopEntry)))
+	}
 	s.section(T("General"), settingsCard(T("Location and language"),
 		wrapLabel(T("Recommendations, charts, radio and podcasts follow this country.")),
 		setRow(T("Country"), "", countrySel),
 		setRow(T("Language"), "", langSel),
-	), settingsCard(T("Desktop"),
-		setRow(T("Keep playing in the tray"), T("Closing the window leaves Kalulu in the system tray"), toggle(prefCloseToTray, a.trayHostAvailable(), nil)),
-		container.NewHBox(flatButton(T("Add Kalulu to the application menu"), theme.ComputerIcon(), s.installDesktopEntry)),
-	))
+	), settingsCard(T("Desktop"), desktop...))
 
 	s.section(T("Personalization"), settingsCard(T("Appearance"),
 		setRow(T("Theme"), "", themeSel),

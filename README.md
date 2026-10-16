@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <b>Version 2.5.1</b> · formerly GuiAmp · a graphical fork of <a href="https://github.com/bjarneo/cliamp">cliamp</a> · GPL-3.0
+  <b>Version 2.5.2</b> · formerly GuiAmp · a graphical fork of <a href="https://github.com/bjarneo/cliamp">cliamp</a> · GPL-3.0
 </p>
 
 ![The Kalulu Home](docs/images/kalulu-home.png)
@@ -65,11 +65,17 @@ Kalulu puts a modern window on the engine of [cliamp](https://github.com/bjarneo
 - Covers are kept at the size they are shown. The visualizer and animations stop when the window is hidden.
 
 **Updates**
-- Checks the releases of this repository. It downloads the AppImage and installs it only when it matches its `SHA256SUMS`.
+- Checks the releases of this repository. It downloads the AppImage or the Windows installer and installs it only when it matches its `SHA256SUMS`.
 
 ![Equalizer and audio](docs/images/kalulu-equalizer.png)
 
 ## Install
+
+### Windows
+
+Download `Kalulu-<version>-x64-setup.exe` from the [Releases](https://github.com/HubDevCode/Kalulu/releases) page and run it. It installs Kalulu with everything it needs, including `yt-dlp` and `ffmpeg`, and adds it to the Start menu. It needs Windows 10 or 11, 64-bit, and installs for the current user without administrator rights.
+
+The installer is not signed, so Windows SmartScreen may warn about it: choose **More info → Run anyway**.
 
 ### AppImage
 
@@ -88,7 +94,7 @@ chmod +x Kalulu-*.AppImage
 | `ffmpeg` | AAC, Opus, ALAC, network streams and the DJ Mixer analysis |
 | `pipewire-alsa` or `pulseaudio-alsa` | audio output on PipeWire or PulseAudio |
 
-The AppImage does not include `yt-dlp` and `ffmpeg`. If they are missing, Kalulu shows the command that installs them when it starts.
+On Linux the AppImage does not include `yt-dlp` and `ffmpeg` (the Windows installer does). If they are missing, Kalulu shows the command that installs them when it starts.
 
 ### Build from source
 

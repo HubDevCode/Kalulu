@@ -1,7 +1,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 BINARY  ?= kalulu
 PREFIX  ?= $(HOME)/.local
-KALULU_VERSION ?= 2.5.1
+KALULU_VERSION ?= 2.5.2
 LDFLAGS := -s -w -X main.version=$(VERSION) -X github.com/bjarneo/cliamp/gui.KaluluVersion=$(KALULU_VERSION)
 
 # CI installs these versions through make tools. Bump STATICCHECK_VERSION
@@ -9,7 +9,7 @@ LDFLAGS := -s -w -X main.version=$(VERSION) -X github.com/bjarneo/cliamp/gui.Kal
 STATICCHECK_VERSION ?= v0.6.1
 GOVULNCHECK_VERSION ?= v1.1.4
 
-.PHONY: build test vet lint staticcheck tools fmt fmt-check tidy-check coverage security ci check clean install uninstall appimage preview
+.PHONY: build test vet lint staticcheck tools fmt fmt-check tidy-check coverage security ci check clean install uninstall appimage windows preview
 
 build:
 	go build -trimpath -ldflags="$(LDFLAGS)" -o $(BINARY) .
@@ -87,6 +87,10 @@ uninstall:
 # appimage builds a portable Kalulu AppImage; see packaging/appimage/build.sh.
 appimage:
 	VERSION=$(VERSION) packaging/appimage/build.sh
+
+# windows builds the Windows installer; see packaging/windows/build.sh.
+windows:
+	VERSION=$(VERSION) sh packaging/windows/build.sh
 
 # preview renders the window offscreen to build/preview/*.png.
 preview:

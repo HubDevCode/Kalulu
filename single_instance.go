@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -28,6 +29,10 @@ func instanceSocket() string {
 	dir := os.Getenv("XDG_RUNTIME_DIR")
 	if dir == "" {
 		dir = os.TempDir()
+		// Windows has no uid, and its temporary folder is per user.
+		if os.Getuid() < 0 {
+			return filepath.Join(dir, "kalulu.sock")
+		}
 		return filepath.Join(dir, fmt.Sprintf("kalulu-%d.sock", os.Getuid()))
 	}
 	return filepath.Join(dir, "kalulu.sock")
@@ -65,6 +70,9 @@ func activateRunning(args []string) bool {
 	return err == nil && reply == "ok\n"
 }
 
+// errAlreadyRunning is returned when another Kalulu holds the socket.
+var errAlreadyRunning = errors.New("kalulu is already running")
+
 // listenInstance claims the single-instance socket. Each request delivers
 // its arguments on the returned channel; an empty list means "show".
 func listenInstance() (<-chan []string, func(), error) {
@@ -72,7 +80,7 @@ func listenInstance() (<-chan []string, func(), error) {
 	// A socket left by a crash answers nobody; remove it.
 	if conn, err := net.DialTimeout("unix", path, time.Second); err == nil {
 		conn.Close()
-		return nil, nil, fmt.Errorf("kalulu is already running")
+		return nil, nil, errAlreadyRunning
 	}
 	_ = os.Remove(path)
 	ln, err := net.Listen("unix", path)

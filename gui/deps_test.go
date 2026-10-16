@@ -43,6 +43,7 @@ func TestInstallCommand(t *testing.T) {
 		{"debian yt-dlp", []string{"yt-dlp"}, []string{"apt-get"}, "sudo apt install pipx && pipx ensurepath && pipx install yt-dlp"},
 		{"fedora", []string{"ffmpeg"}, []string{"dnf"}, "sudo dnf install ffmpeg"},
 		{"opensuse", []string{"yt-dlp"}, []string{"zypper"}, "sudo zypper install yt-dlp"},
+		{"windows", []string{"yt-dlp", "ffmpeg"}, []string{"winget"}, "winget install -e --id yt-dlp.yt-dlp\nwinget install -e --id Gyan.FFmpeg"},
 		{"unknown", []string{"ffmpeg"}, nil, ""},
 	}
 	for _, tt := range tests {

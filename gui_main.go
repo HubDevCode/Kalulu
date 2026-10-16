@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
-	"syscall"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -44,8 +43,14 @@ func runGUI(overrides config.Overrides, positional []string, background bool, ro
 		return nil
 	}
 	activate, stopInstance, err := listenInstance()
-	if err != nil {
+	if errors.Is(err, errAlreadyRunning) {
 		return err
+	}
+	if err != nil {
+		// Without Unix sockets (Windows before 10 1803, wine) Kalulu runs
+		// without the single-instance check.
+		fmt.Fprintf(os.Stderr, "single instance: %v\n", err)
+		activate, stopInstance = nil, func() {}
 	}
 	defer stopInstance()
 
@@ -64,6 +69,7 @@ func runGUI(overrides config.Overrides, positional []string, background bool, ro
 	}
 	setupDiagnostics()
 	tuneMemory()
+	updateBundledYTDLP()
 
 	positional, err = searchArgs(positional)
 	if err != nil {
@@ -269,20 +275,6 @@ func runGUI(overrides config.Overrides, positional []string, background bool, ro
 // errRestart asks main to start Kalulu again once runGUI has released the
 // audio device, the socket and the plugins.
 var errRestart = errors.New("restart requested")
-
-// restartSelf replaces the process with a fresh Kalulu.
-func restartSelf() error {
-	exe, err := os.Executable()
-	if err != nil {
-		return err
-	}
-	// Inside an AppImage the binary needs the launcher, which mounts the
-	// image and sets up its libraries again.
-	if image := os.Getenv("APPIMAGE"); image != "" {
-		exe = image
-	}
-	return syscall.Exec(exe, os.Args, os.Environ())
-}
 
 // guiEngine implements gui.Engine over the Bubble Tea program of the Model.
 type guiEngine struct {

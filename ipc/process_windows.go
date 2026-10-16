@@ -7,10 +7,11 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/bjarneo/cliamp/internal/sysproc"
 )
 
 func processAlive(pid int) (bool, error) {
@@ -22,7 +23,7 @@ func processAlive(pid int) (bool, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "tasklist", "/FI", fmt.Sprintf("PID eq %d", pid), "/FO", "CSV", "/NH").Output()
+	out, err := sysproc.CommandContext(ctx, "tasklist", "/FI", fmt.Sprintf("PID eq %d", pid), "/FO", "CSV", "/NH").Output()
 	if err != nil {
 		return false, fmt.Errorf("probe process liveness: %w", err)
 	}

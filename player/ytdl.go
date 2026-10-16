@@ -16,6 +16,7 @@ import (
 
 	"github.com/gopxl/beep/v2"
 
+	"github.com/bjarneo/cliamp/internal/sysproc"
 	"github.com/bjarneo/cliamp/internal/ytdlcookies"
 	"github.com/bjarneo/cliamp/internal/ytdlp"
 )
@@ -58,7 +59,7 @@ func probeYTDLDuration(pageURL string) time.Duration {
 	// playlist.IsURL, but keep the terminator so a future caller cannot turn
 	// a crafted URL into --exec and reach arbitrary command execution.
 	args = append(args, "--", pageURL)
-	cmd := exec.CommandContext(ctx, "yt-dlp", args...)
+	cmd := sysproc.CommandContext(ctx, "yt-dlp", args...)
 	// WaitDelay ensures cmd.Output() doesn't hang indefinitely if the
 	// process is killed but I/O pipe goroutines haven't drained. Without
 	// this, a zombie yt-dlp child keeping stdout open can block Output()
@@ -260,7 +261,7 @@ func decodeYTDLPipe(pageURL string, sr beep.SampleRate, bitDepth, startSec int) 
 	}
 	ytdlArgs = appendYTDLCookieArgs(ytdlArgs, pageURL)
 	ytdlArgs = append(ytdlArgs, "--", pageURL)
-	ytdlCmd := exec.Command("yt-dlp", ytdlArgs...)
+	ytdlCmd := sysproc.Command("yt-dlp", ytdlArgs...)
 	ytdlCmd.Stdout = pw
 	var ytdlStderr limitedBuffer
 	ytdlCmd.Stderr = &ytdlStderr
@@ -279,7 +280,7 @@ func decodeYTDLPipe(pageURL string, sr beep.SampleRate, bitDepth, startSec int) 
 	}
 	ffmpegArgs = append(ffmpegArgs, "-i", "pipe:0")
 	ffmpegArgs = append(ffmpegArgs, pcmOutputArgs(sr, bitDepth)...)
-	ffmpegCmd := exec.Command("ffmpeg", ffmpegArgs...)
+	ffmpegCmd := sysproc.Command("ffmpeg", ffmpegArgs...)
 	ffmpegCmd.Stdin = pr
 	var ffmpegStderr limitedBuffer
 	ffmpegCmd.Stderr = &ffmpegStderr
@@ -355,7 +356,7 @@ func decodeYTDLDirect(res YTResolved, sr beep.SampleRate, bitDepth, startSec int
 	}
 	args = append(args, "-i", res.URL)
 	args = append(args, pcmOutputArgs(sr, bitDepth)...)
-	ffmpegCmd := exec.Command("ffmpeg", args...)
+	ffmpegCmd := sysproc.Command("ffmpeg", args...)
 	var ffmpegStderr limitedBuffer
 	ffmpegCmd.Stderr = &ffmpegStderr
 	pcmR, pcmW, err := os.Pipe()

@@ -34,10 +34,13 @@ func missingTools(found func(string) bool) []string {
 	return out
 }
 
+// wingetIDs are the winget packages of the required tools.
+var wingetIDs = map[string]string{"yt-dlp": "yt-dlp.yt-dlp", "ffmpeg": "Gyan.FFmpeg"}
+
 // installCommand is the command that installs missing with the package
 // manager that found finds, or "" when none is known. The yt-dlp of the
 // Debian and Ubuntu archives is often too old for YouTube, so there it
-// comes from pipx.
+// comes from pipx. winget takes one package per command, one per line.
 func installCommand(missing []string, found func(string) bool) string {
 	if len(missing) == 0 {
 		return ""
@@ -66,6 +69,12 @@ func installCommand(missing []string, found func(string) bool) string {
 		return "sudo zypper install " + pkgs
 	case found("brew"):
 		return "brew install " + pkgs
+	case found("winget"):
+		var cmds []string
+		for _, name := range missing {
+			cmds = append(cmds, "winget install -e --id "+wingetIDs[name])
+		}
+		return strings.Join(cmds, "\n")
 	}
 	return ""
 }

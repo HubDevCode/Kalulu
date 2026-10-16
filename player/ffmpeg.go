@@ -15,6 +15,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bjarneo/cliamp/internal/sysproc"
+
 	"github.com/gopxl/beep/v2"
 )
 
@@ -233,7 +235,7 @@ func decodeFFmpegStream(path string, sr beep.SampleRate, bitDepth int) (*ffmpegP
 // returned ffmpegPipe in a streamer type.
 func startFFmpegPipe(input string, stdin io.ReadCloser, sr beep.SampleRate, bitDepth int) (ffmpegPipe, beep.Format, error) {
 	_, _, precision := ffmpegPCMArgs(bitDepth)
-	cmd := exec.Command("ffmpeg", append([]string{"-i", input}, pcmOutputArgs(sr, bitDepth)...)...)
+	cmd := sysproc.Command("ffmpeg", append([]string{"-i", input}, pcmOutputArgs(sr, bitDepth)...)...)
 	cmd.Stdin = stdin
 	proc := newFFmpegProcess(cmd)
 
@@ -445,7 +447,7 @@ func (s *localFFmpegStreamer) startPipe(seekPos int) (ffmpegPipe, error) {
 	args = append(args, "-i", s.path)
 	args = append(args, pcmOutputArgs(s.sr, s.bitDepth())...)
 
-	cmd := exec.Command("ffmpeg", args...)
+	cmd := sysproc.Command("ffmpeg", args...)
 	proc := newFFmpegProcess(cmd)
 	pipe, err := cmd.StdoutPipe()
 	if err != nil {
@@ -650,7 +652,7 @@ func (s *navFFmpegStreamer) startPipe(seekPos int, validate bool) (ffmpegPipe, e
 		args = append(args, "-ss", strconv.FormatFloat(secs, 'f', 3, 64))
 	}
 	args = append(args, pcmOutputArgs(s.sr, s.bitDepth())...)
-	cmd := exec.Command("ffmpeg", args...)
+	cmd := sysproc.Command("ffmpeg", args...)
 	proc := newFFmpegProcess(cmd)
 
 	pipe, err := cmd.StdoutPipe()
@@ -767,7 +769,7 @@ func probeFrames(path string, sr beep.SampleRate) int {
 func probeFramesWithin(path string, sr beep.SampleRate, timeout time.Duration) int {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "ffprobe",
+	cmd := sysproc.CommandContext(ctx, "ffprobe",
 		"-v", "error",
 		"-show_entries", "format=duration",
 		"-of", "default=noprint_wrappers=1:nokey=1",

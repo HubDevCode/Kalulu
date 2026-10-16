@@ -22,3 +22,5 @@ coverage.out
 
 # Kalulu builds
 /kalulu
+/kalulu.exe
+/kalulu_windows_*.syso

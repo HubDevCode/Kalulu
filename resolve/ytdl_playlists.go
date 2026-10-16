@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bjarneo/cliamp/internal/sysproc"
 	"github.com/bjarneo/cliamp/internal/ytdlcookies"
 	"github.com/bjarneo/cliamp/playlist"
 )
@@ -111,7 +112,7 @@ func FetchUserPlaylists(browser string) ([]playlist.PlaylistInfo, error) {
 	}
 	args = append(args, "--", "https://www.youtube.com/feed/playlists")
 
-	cmd := exec.CommandContext(ctx, "yt-dlp", args...)
+	cmd := sysproc.CommandContext(ctx, "yt-dlp", args...)
 	cmd.WaitDelay = 3 * time.Second
 	var stderr strings.Builder
 	cmd.Stderr = &stderr

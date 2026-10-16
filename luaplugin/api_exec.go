@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bjarneo/cliamp/internal/sysproc"
+
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -221,7 +223,7 @@ func (m *Manager) registerExecAPI(L *lua.LState, cliamp *lua.LTable, p *Plugin) 
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		cmd := exec.CommandContext(ctx, path, argv...)
+		cmd := sysproc.CommandContext(ctx, path, argv...)
 		if cwd != "" {
 			cmd.Dir = cwd
 		}

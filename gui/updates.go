@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -26,7 +27,7 @@ import (
 
 // KaluluVersion is the version of Kalulu, set at build time with
 // -ldflags "-X github.com/bjarneo/cliamp/gui.KaluluVersion=1.2.3".
-var KaluluVersion = "2.5.1"
+var KaluluVersion = "2.5.2"
 
 // updateRepo is the GitHub repository of the releases.
 const updateRepo = "HubDevCode/Kalulu"
@@ -113,20 +114,36 @@ func newerVersion(latest, current string) bool {
 
 // pickAsset chooses the download for this system and the checksum list.
 func pickAsset(r release) (pkg, sums *releaseAsset) {
-	arch := runtime.GOARCH
-	alias := map[string]string{"amd64": "x86_64", "arm64": "aarch64"}[arch]
+	return pickAssetFor(r, runtime.GOOS, runtime.GOARCH)
+}
+
+// pickAssetFor chooses the download for goos and goarch: the AppImage on
+// Linux, the installer on Windows.
+func pickAssetFor(r release, goos, goarch string) (pkg, sums *releaseAsset) {
+	alias := map[string]string{"amd64": "x86_64", "arm64": "aarch64"}[goarch]
 	for i := range r.Assets {
 		a := &r.Assets[i]
 		name := strings.ToLower(a.Name)
 		switch {
 		case name == "sha256sums" || strings.HasSuffix(name, "sha256sums.txt") || name == "checksums.txt":
 			sums = a
-		case pkg == nil && runtime.GOOS == "linux" && strings.HasSuffix(name, ".appimage") &&
-			(strings.Contains(name, arch) || (alias != "" && strings.Contains(name, alias))):
+		case pkg == nil && goos == "linux" && strings.HasSuffix(name, ".appimage") &&
+			(strings.Contains(name, goarch) || (alias != "" && strings.Contains(name, alias))):
+			pkg = a
+		case pkg == nil && goos == "windows" && strings.HasSuffix(name, "-setup.exe") &&
+			strings.Contains(name, windowsArch(goarch)):
 			pkg = a
 		}
 	}
 	return pkg, sums
+}
+
+// windowsArch is the architecture name of the Windows installers.
+func windowsArch(goarch string) string {
+	if goarch == "amd64" {
+		return "x64"
+	}
+	return goarch
 }
 
 // downloadVerified downloads the asset and checks it against the SHA-256
@@ -290,6 +307,10 @@ func userDownloads() string {
 // offerInstall replaces the running AppImage with the verified download, or
 // shows where the file is.
 func (a *App) offerInstall(path string) {
+	if runtime.GOOS == "windows" {
+		a.runInstaller(path)
+		return
+	}
 	current := os.Getenv("APPIMAGE")
 	if current == "" {
 		a.toast(T("Update verified and saved to ") + path)
@@ -305,6 +326,19 @@ func (a *App) offerInstall(path string) {
 	}
 	a.toast(T("Update installed; restarting…"))
 	a.restart()
+}
+
+// runInstaller starts the verified Windows installer without its wizard
+// and quits, so the installer can replace the files. The installer starts
+// Kalulu again when it is done.
+func (a *App) runInstaller(path string) {
+	cmd := exec.Command(path, "/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS")
+	if err := cmd.Start(); err != nil {
+		a.toastError(fmt.Errorf("install: %w", err))
+		return
+	}
+	a.toast(T("Update installed; restarting…"))
+	a.quit()
 }
 
 // autoCheckUpdates checks once a day and tells the user about a newer

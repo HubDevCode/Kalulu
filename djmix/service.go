@@ -19,6 +19,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bjarneo/cliamp/internal/sysproc"
 	"github.com/bjarneo/cliamp/player"
 	"github.com/bjarneo/cliamp/playlist"
 )
@@ -62,7 +63,7 @@ func decodeOnce(ctx context.Context, path string, direct bool) ([]float32, error
 			if err != nil {
 				return nil, fmt.Errorf("djmix: yt-dlp is required for %s: %w", path, err)
 			}
-			raw, err := exec.CommandContext(ctx, ytdlp, "-g", "-f", "worstaudio[acodec=opus]/worstaudio/bestaudio/best", "--no-playlist", "--quiet", "--no-warnings", "--", path).Output()
+			raw, err := sysproc.CommandContext(ctx, ytdlp, "-g", "-f", "worstaudio[acodec=opus]/worstaudio/bestaudio/best", "--no-playlist", "--quiet", "--no-warnings", "--", path).Output()
 			if err != nil {
 				return nil, fmt.Errorf("djmix: yt-dlp %s: %w", path, err)
 			}
@@ -75,25 +76,25 @@ func decodeOnce(ctx context.Context, path string, direct bool) ([]float32, error
 		if ua != "" {
 			in = append(in, "-user_agent", ua)
 		}
-		cmd = exec.CommandContext(ctx, ffmpeg, append(append(in, "-i", media), out...)...)
+		cmd = sysproc.CommandContext(ctx, ffmpeg, append(append(in, "-i", media), out...)...)
 	case playlist.IsYTDL(path):
 		ytdlp, err := exec.LookPath("yt-dlp")
 		if err != nil {
 			return nil, fmt.Errorf("djmix: yt-dlp is required for %s: %w", path, err)
 		}
-		feeder = exec.CommandContext(ctx, ytdlp, "-f", "worstaudio[acodec=opus]/worstaudio/bestaudio/best", "--no-playlist", "--quiet", "--no-warnings", "-o", "-", path)
-		cmd = exec.CommandContext(ctx, ffmpeg, append([]string{"-i", "pipe:0"}, out...)...)
+		feeder = sysproc.CommandContext(ctx, ytdlp, "-f", "worstaudio[acodec=opus]/worstaudio/bestaudio/best", "--no-playlist", "--quiet", "--no-warnings", "-o", "-", path)
+		cmd = sysproc.CommandContext(ctx, ffmpeg, append([]string{"-i", "pipe:0"}, out...)...)
 		pipe, err := feeder.StdoutPipe()
 		if err != nil {
 			return nil, err
 		}
 		cmd.Stdin = pipe
 	case strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://"):
-		cmd = exec.CommandContext(ctx, ffmpeg, append([]string{"-i", path}, out...)...)
+		cmd = sysproc.CommandContext(ctx, ffmpeg, append([]string{"-i", path}, out...)...)
 	case strings.HasPrefix(path, "file://"):
-		cmd = exec.CommandContext(ctx, ffmpeg, append([]string{"-i", strings.TrimPrefix(path, "file://")}, out...)...)
+		cmd = sysproc.CommandContext(ctx, ffmpeg, append([]string{"-i", strings.TrimPrefix(path, "file://")}, out...)...)
 	case !strings.Contains(path, "://") && !strings.Contains(path, ":track:"):
-		cmd = exec.CommandContext(ctx, ffmpeg, append([]string{"-i", path}, out...)...)
+		cmd = sysproc.CommandContext(ctx, ffmpeg, append([]string{"-i", path}, out...)...)
 	default:
 		return nil, ErrUnsupported
 	}

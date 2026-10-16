@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bjarneo/cliamp/internal/sysproc"
 	"github.com/bjarneo/cliamp/internal/ytdlcookies"
 )
 
@@ -305,7 +306,7 @@ func resolveWithCommand(ctx context.Context, pageURL string) (YTResolved, error)
 		"-O", "%(duration)s", "-O", "%(protocol)s", "-O", "%(http_headers.User-Agent)s", "-O", "%(url)s"}
 	args = appendYTDLCookieArgs(args, pageURL)
 	args = append(args, "--", pageURL)
-	cmd := exec.CommandContext(ctx, "yt-dlp", args...)
+	cmd := sysproc.CommandContext(ctx, "yt-dlp", args...)
 	cmd.WaitDelay = 3 * time.Second
 	out, err := cmd.Output()
 	if err != nil {
@@ -417,7 +418,7 @@ func (r *ytResolver) dropHelper(h *ytHelper) {
 }
 
 func startYTHelper(python, sysPath string) (*ytHelper, error) {
-	cmd := exec.Command(python, "-I", "-c", ytHelperScript, sysPath)
+	cmd := sysproc.Command(python, "-I", "-c", ytHelperScript, sysPath)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err

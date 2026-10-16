@@ -35,3 +35,35 @@ jobs:
         run: go test ./...
       - name: Build
         run: make build
+
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          path-type: inherit
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-flac
+            mingw-w64-x86_64-libogg
+            mingw-w64-x86_64-libvorbis
+            mingw-w64-x86_64-mpg123
+      - name: Vet, test and build for Windows
+        shell: msys2 {0}
+        env:
+          CGO_ENABLED: "1"
+          CGO_LDFLAGS: "-Wl,-Bstatic -logg -Wl,-Bdynamic"
+        run: |
+          go vet . ./gui/ ./internal/sysproc/ ./player/ ./djmix/ ./resolve/ ./ipc/
+          go test ./internal/sysproc/ ./gui/
+          go build -ldflags="-H windowsgui" -o kalulu.exe .

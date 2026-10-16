@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/bjarneo/cliamp/internal/sshurl"
+	"github.com/bjarneo/cliamp/internal/sysproc"
 
 	"github.com/gopxl/beep/v2"
 	"github.com/gopxl/beep/v2/flac"
@@ -89,7 +90,7 @@ func openSSHSource(path string) (sourceResult, error) {
 	catCmd := "cat -- " + shellQuoteSSH(parsed.Path)
 	args := parsed.SSHArgs()
 	args = append(args, catCmd)
-	cmd := exec.Command("ssh", args...)
+	cmd := sysproc.Command("ssh", args...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return sourceResult{}, fmt.Errorf("ssh stdout pipe: %w", err)

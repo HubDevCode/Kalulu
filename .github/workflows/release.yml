@@ -1,7 +1,8 @@
 name: Release
 
-# Pushing a tag such as v2.5.0 builds the AppImage and publishes it with its
-# SHA256SUMS. The updater of Kalulu installs only a download that matches it.
+# Pushing a tag such as v2.5.2 builds the AppImage and the Windows installer
+# and publishes them with one SHA256SUMS. The updater of Kalulu installs only
+# a download that matches it.
 on:
   push:
     tags:
@@ -37,11 +38,72 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN: "1"
           VERSION: ${{ github.ref_name }}
         run: sh packaging/appimage/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: appimage
+          path: |
+            build/appimage/Kalulu-*.AppImage
+            build/appimage/SHA256SUMS
+
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          path-type: inherit
+          install: >-
+            unzip
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-flac
+            mingw-w64-x86_64-libogg
+            mingw-w64-x86_64-libvorbis
+            mingw-w64-x86_64-mpg123
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          $setup = "$env:RUNNER_TEMP\innosetup.exe"
+          Invoke-WebRequest -Uri https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe -OutFile $setup
+          if ((Get-FileHash $setup -Algorithm SHA256).Hash -ne '9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732') { throw 'Inno Setup checksum mismatch' }
+          Start-Process -Wait -FilePath $setup -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CURRENTUSER', '/DIR=C:\InnoSetup'
+      - name: Build the installer
+        shell: msys2 {0}
+        env:
+          VERSION: ${{ github.ref_name }}
+          ISCC: /c/InnoSetup/ISCC.exe
+          # ISCC takes /Q and Windows paths: MSYS2 must not rewrite them.
+          MSYS2_ARG_CONV_EXCL: "*"
+        run: sh packaging/windows/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            build/windows/Kalulu-*-setup.exe
+            build/windows/SHA256SUMS
+
+  publish:
+    needs: [appimage, windows]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          files="build/appimage/Kalulu-*.AppImage build/appimage/SHA256SUMS"
+          cat dist/appimage/SHA256SUMS dist/windows/SHA256SUMS >dist/SHA256SUMS
+          files="dist/appimage/Kalulu-*.AppImage dist/windows/Kalulu-*-setup.exe dist/SHA256SUMS"
           # A tag moved to a fixed commit replaces the files of its release.
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" $files --clobber

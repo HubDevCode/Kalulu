@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/bjarneo/cliamp/internal/httpclient"
+	"github.com/bjarneo/cliamp/internal/sysproc"
 	"github.com/bjarneo/cliamp/internal/ytdlp"
 	"github.com/bjarneo/cliamp/playlist"
 	"github.com/bjarneo/cliamp/provider"
@@ -449,7 +450,7 @@ func extractBrowserCookieHeader(ctx context.Context, browser string) (string, er
 
 	cmdCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(cmdCtx, "yt-dlp",
+	cmd := sysproc.CommandContext(cmdCtx, "yt-dlp",
 		"--cookies-from-browser", browser,
 		"--cookies", path,
 		"--flat-playlist",
