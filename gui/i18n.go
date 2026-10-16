@@ -641,11 +641,14 @@ var italian = map[string]string{
 	"Automatic (best of all)":                                  "Automatica (la migliore tra tutte)",
 
 	"Kalulu needs these programs to play music from YouTube and most streams, and they are not installed:": "Kalulu ha bisogno di questi programmi per riprodurre la musica da YouTube e dalla maggior parte degli stream, ma non sono installati:",
-	"Local files can still play. Install them, then restart Kalulu.":                                       "I file locali si possono comunque riprodurre. Installali e poi riavvia Kalulu.",
+
+	"Local files can still play. Install them, then restart Kalulu.": "I file locali si possono comunque riprodurre. Installali e poi riavvia Kalulu.",
+
+	"Install them with the package manager of your distribution.": "Installali con il gestore di pacchetti della tua distribuzione.",
+
 	"Run this command in a terminal:": "Esegui questo comando in un terminale:",
 	"Copy command":                    "Copia comando",
 	"Command copied":                  "Comando copiato",
-	"Install them with the package manager of your distribution.": "Installali con il gestore di pacchetti della tua distribuzione.",
-	"Don't remind me again": "Non ricordarmelo più",
-	"Missing programs":      "Programmi mancanti",
+	"Don't remind me again":           "Non ricordarmelo più",
+	"Missing programs":                "Programmi mancanti",
 }
