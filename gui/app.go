@@ -131,6 +131,7 @@ func Run(engine Engine, opts Options) (restart bool) {
 	go a.watchAuthURLs()
 	go a.loadProviders()
 	a.autoCheckUpdates()
+	a.checkTools()
 	a.startRoomFromOptions()
 	go func() {
 		<-engine.Done()

@@ -46,5 +46,11 @@ jobs:
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" $files --clobber
           else
-            gh release create "$GITHUB_REF_NAME" --title "Kalulu ${GITHUB_REF_NAME#v}" --generate-notes $files
+            # packaging/release-notes/<tag>.md, when present, is the description.
+            notes="packaging/release-notes/$GITHUB_REF_NAME.md"
+            if [ -f "$notes" ]; then
+              gh release create "$GITHUB_REF_NAME" --title "Kalulu ${GITHUB_REF_NAME#v}" --notes-file "$notes" $files
+            else
+              gh release create "$GITHUB_REF_NAME" --title "Kalulu ${GITHUB_REF_NAME#v}" --generate-notes $files
+            fi
           fi

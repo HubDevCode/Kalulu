@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <b>Version 2.5.0</b> · formerly GuiAmp · a graphical fork of <a href="https://github.com/bjarneo/cliamp">cliamp</a> · GPL-3.0
+  <b>Version 2.5.1</b> · formerly GuiAmp · a graphical fork of <a href="https://github.com/bjarneo/cliamp">cliamp</a> · GPL-3.0
 </p>
 
 ![The Kalulu Home](docs/images/kalulu-home.png)
@@ -87,6 +87,8 @@ chmod +x Kalulu-*.AppImage
 | `yt-dlp` | YouTube, YouTube Music, SoundCloud, Bandcamp |
 | `ffmpeg` | AAC, Opus, ALAC, network streams and the DJ Mixer analysis |
 | `pipewire-alsa` or `pulseaudio-alsa` | audio output on PipeWire or PulseAudio |
+
+The AppImage does not include `yt-dlp` and `ffmpeg`. If they are missing, Kalulu shows the command that installs them when it starts.
 
 ### Build from source
 

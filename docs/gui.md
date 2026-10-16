@@ -219,6 +219,12 @@ change between distributions, and uses the host's OpenGL, X11, Wayland and
 ALSA. Build it on the oldest distribution you want to support, since glibc
 is not bundled. It needs [appimagetool](https://github.com/AppImage/appimagetool).
 
+The AppImage does not carry `yt-dlp` and `ffmpeg`. When either is missing,
+Kalulu says so at start, with the command that installs it on the
+distribution (`pacman`, `apt`, `dnf` or `zypper`). On `apt` systems yt-dlp
+comes from `pipx`, as the archive version is often too old for YouTube.
+"Don't remind me again" hides the message.
+
 ### Flatpak
 
 `packaging/flatpak/io.kalulu.Kalulu.yml` builds a Flatpak on the

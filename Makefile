@@ -1,7 +1,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 BINARY  ?= kalulu
 PREFIX  ?= $(HOME)/.local
-KALULU_VERSION ?= 2.5.0
+KALULU_VERSION ?= 2.5.1
 LDFLAGS := -s -w -X main.version=$(VERSION) -X github.com/bjarneo/cliamp/gui.KaluluVersion=$(KALULU_VERSION)
 
 # CI installs these versions through make tools. Bump STATICCHECK_VERSION
