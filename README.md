@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <b>Version 2.5.2</b> · formerly GuiAmp · a graphical fork of <a href="https://github.com/bjarneo/cliamp">cliamp</a> · GPL-3.0
+  <b>Version 2.5.3</b> · formerly GuiAmp · a graphical fork of <a href="https://github.com/bjarneo/cliamp">cliamp</a> · GPL-3.0
 </p>
 
 ![The Kalulu Home](docs/images/kalulu-home.png)
@@ -65,7 +65,7 @@ Kalulu puts a modern window on the engine of [cliamp](https://github.com/bjarneo
 - Covers are kept at the size they are shown. The visualizer and animations stop when the window is hidden.
 
 **Updates**
-- Checks the releases of this repository. It downloads the AppImage or the Windows installer and installs it only when it matches its `SHA256SUMS`.
+- Checks the releases of this repository every time it starts and shows a panel when a new version is out. It downloads the AppImage or the Windows installer and installs it only when it matches its `SHA256SUMS`.
 
 ![Equalizer and audio](docs/images/kalulu-equalizer.png)
 

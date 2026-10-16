@@ -13,6 +13,8 @@
 #
 # Variables: VERSION (tag, default git describe), WORKDIR, MINGW_PREFIX,
 # ISCC, YTDLP_VERSION (default latest), FFMPEG_BRANCH (default 8.1).
+# PYTHON_VERSION and PYTHON_SHA256 pin the embeddable Python that keeps
+# yt-dlp loaded between tracks; bump them together.
 set -eu
 
 root=$(cd "$(dirname "$0")/../.." && pwd)
@@ -22,6 +24,8 @@ stage=$work/stage
 mingw=${MINGW_PREFIX:-/mingw64}
 ytdlp_version=${YTDLP_VERSION:-latest}
 ffmpeg_branch=${FFMPEG_BRANCH:-8.1}
+python_version=${PYTHON_VERSION:-3.14.8}
+python_sha256=${PYTHON_SHA256:-a93abe456ab01bd96d7a085b3cdb6566b3063f4241360d114142fbdb07f0a310}
 
 tool() {
 	if command -v "x86_64-w64-mingw32-$1" >/dev/null 2>&1; then
@@ -87,6 +91,20 @@ curl -fsSL -o "$work/dl/SHA2-256SUMS" "$ytdlp_url/SHA2-256SUMS"
 verify "$work/dl/yt-dlp.exe" "$work/dl/SHA2-256SUMS"
 cp "$work/dl/yt-dlp.exe" "$stage/tools/"
 
+# The yt-dlp zipapp and the embeddable Python that runs it. yt-dlp.exe is
+# frozen and starts for every call; Kalulu keeps the zipapp loaded instead.
+curl -fsSL -o "$work/dl/yt-dlp" "$ytdlp_url/yt-dlp"
+verify "$work/dl/yt-dlp" "$work/dl/SHA2-256SUMS"
+cp "$work/dl/yt-dlp" "$stage/tools/yt-dlp.pyz"
+python_zip=python-$python_version-embed-amd64.zip
+curl -fsSL -o "$work/dl/$python_zip" "https://www.python.org/ftp/python/$python_version/$python_zip"
+if [ "$(sha256sum "$work/dl/$python_zip" | cut -d' ' -f1)" != "$python_sha256" ]; then
+	echo "checksum mismatch for $python_zip" >&2
+	exit 1
+fi
+mkdir -p "$stage/tools/python"
+(cd "$stage/tools/python" && unzip -q "$work/dl/$python_zip")
+
 # ffmpeg and ffprobe of the BtbN builds, GPL, with shared libraries.
 ffmpeg_zip=ffmpeg-n$ffmpeg_branch-latest-win64-gpl-shared-$ffmpeg_branch.zip
 ffmpeg_url=https://github.com/BtbN/FFmpeg-Builds/releases/download/latest
@@ -105,8 +123,12 @@ ytdlp_built=$("$work/dl/yt-dlp.exe" --version 2>/dev/null || echo "$ytdlp_versio
 cat >"$stage/licenses/THIRD-PARTY.txt" <<EOF
 Kalulu $version for Windows includes these programs, unmodified:
 
-yt-dlp $ytdlp_built
+yt-dlp $ytdlp_built (yt-dlp.exe and the zipapp yt-dlp.pyz)
   The Unlicense (public domain). https://github.com/yt-dlp/yt-dlp
+
+Python $python_version, embeddable package (tools\python)
+  Python Software Foundation License. https://www.python.org
+  https://docs.python.org/3/license.html
 
 FFmpeg $ffmpeg_branch (ffmpeg, ffprobe and their libraries)
   GPL version 3 or later, see FFmpeg-LICENSE.txt.

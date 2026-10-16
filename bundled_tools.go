@@ -9,6 +9,7 @@ import (
 
 	"github.com/bjarneo/cliamp/applog"
 	"github.com/bjarneo/cliamp/internal/sysproc"
+	"github.com/bjarneo/cliamp/player"
 )
 
 // bundledToolsDir is the folder next to the binary where the Windows
@@ -16,11 +17,38 @@ import (
 var bundledToolsDir = findBundledTools()
 
 // The installed tools come before the system ones, so playback uses the
-// versions the installer verified.
+// versions the installer verified. The bundled Python with the yt-dlp
+// zipapp keeps yt-dlp loaded between tracks, as on Linux.
 func init() {
-	if bundledToolsDir != "" {
-		_ = os.Setenv("PATH", bundledToolsDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	if bundledToolsDir == "" {
+		return
 	}
+	_ = os.Setenv("PATH", bundledToolsDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	python, zipapp := bundledYTDLPZipapp()
+	if python != "" {
+		player.UseBundledYTDLP(python, zipapp)
+	}
+}
+
+// warmBundledYTDLP loads the bundled yt-dlp at start: on Windows the first
+// load takes a few seconds, which the first track should not wait for.
+func warmBundledYTDLP() {
+	if python, _ := bundledYTDLPZipapp(); python != "" {
+		player.WarmYT()
+	}
+}
+
+// bundledYTDLPZipapp returns the bundled Python and yt-dlp zipapp, or ""
+// when either is missing.
+func bundledYTDLPZipapp() (python, zipapp string) {
+	python = filepath.Join(bundledToolsDir, "python", "python.exe")
+	zipapp = filepath.Join(bundledToolsDir, "yt-dlp.pyz")
+	for _, f := range []string{python, zipapp} {
+		if _, err := os.Stat(f); err != nil {
+			return "", ""
+		}
+	}
+	return python, zipapp
 }
 
 func findBundledTools() string {
@@ -42,15 +70,22 @@ func findBundledTools() string {
 // changes often, and an old yt-dlp stops resolving its tracks.
 const ytdlpUpdateEvery = 24 * time.Hour
 
-// updateBundledYTDLP runs "yt-dlp -U" on the bundled yt-dlp once a day. A
-// yt-dlp from the system package manager is left to it. The update fails
-// quietly when the install folder is read-only.
+// updateBundledYTDLP runs "yt-dlp -U" once a day on the bundled yt-dlp.exe
+// and the zipapp, which update separately. A yt-dlp from the system package
+// manager is left to it. The update fails quietly when the install folder
+// is read-only, and runs again at the next start.
 func updateBundledYTDLP() {
 	if bundledToolsDir == "" {
 		return
 	}
-	bin := filepath.Join(bundledToolsDir, "yt-dlp.exe")
-	if _, err := os.Stat(bin); err != nil {
+	var cmds [][]string
+	if bin := filepath.Join(bundledToolsDir, "yt-dlp.exe"); fileExists(bin) {
+		cmds = append(cmds, []string{bin, "-U"})
+	}
+	if python, zipapp := bundledYTDLPZipapp(); python != "" {
+		cmds = append(cmds, []string{python, zipapp, "-U"})
+	}
+	if len(cmds) == 0 {
 		return
 	}
 	stamp := filepath.Join(bundledToolsDir, ".yt-dlp-updated")
@@ -59,16 +94,27 @@ func updateBundledYTDLP() {
 	}
 	go func() {
 		time.Sleep(30 * time.Second)
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
-		defer cancel()
-		out, err := sysproc.CommandContext(ctx, bin, "-U").CombinedOutput()
-		if err != nil {
-			applog.Warn("yt-dlp update: %v: %s", err, strings.TrimSpace(string(out)))
-			return
+		ok := true
+		for _, args := range cmds {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+			out, err := sysproc.CommandContext(ctx, args[0], args[1:]...).CombinedOutput()
+			cancel()
+			if err != nil {
+				applog.Warn("yt-dlp update (%s): %v: %s", filepath.Base(args[len(args)-2]), err, strings.TrimSpace(string(out)))
+				ok = false
+				continue
+			}
+			applog.Info("yt-dlp update (%s): %s", filepath.Base(args[len(args)-2]), strings.TrimSpace(string(out)))
 		}
-		applog.Info("yt-dlp update: %s", strings.TrimSpace(string(out)))
-		_ = os.WriteFile(stamp, nil, 0o644)
-		now := time.Now()
-		_ = os.Chtimes(stamp, now, now)
+		if ok {
+			_ = os.WriteFile(stamp, nil, 0o644)
+			now := time.Now()
+			_ = os.Chtimes(stamp, now, now)
+		}
 	}()
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }

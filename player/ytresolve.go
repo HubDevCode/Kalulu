@@ -26,9 +26,11 @@ import (
 //
 // yt-dlp is a Python program, and half of its time per track is starting
 // Python and loading its extractors. The resolver keeps one Python process
-// with yt-dlp loaded and sends it the URLs; the process exits after a few
-// idle minutes, so it uses no memory while nothing new plays. When Python
+// with yt-dlp loaded and sends it the URLs; the process exits after 15
+// idle minutes, so it uses no memory while nothing new plays. Loading it
+// again costs seconds on Windows, so it stays through long listening. When Python
 // cannot import yt-dlp (a standalone binary), each URL runs yt-dlp once.
+// The Windows installer ships a Python and the yt-dlp zipapp for this.
 
 // YTResolved is the direct audio of a page.
 type YTResolved struct {
@@ -39,7 +41,7 @@ type YTResolved struct {
 }
 
 const (
-	ytResolveIdle    = 90 * time.Second
+	ytResolveIdle    = 15 * time.Minute
 	ytResolveTimeout = 25 * time.Second
 	ytResolveMaxKeep = 200
 )
@@ -66,7 +68,10 @@ def worker(q):
         key = (req.get("format", ""), req.get("cookies", ""))
         ydl = ydls.get(key)
         if ydl is None:
-            opts = {"quiet": True, "no_warnings": True, "noplaylist": True, "format": key[0] or "bestaudio/best", "socket_timeout": 15}
+            # HLS and DASH manifests are skipped: the resolver plays only a
+            # direct URL, and each manifest is one more request per track.
+            opts = {"quiet": True, "no_warnings": True, "noplaylist": True, "format": key[0] or "bestaudio/best", "socket_timeout": 15,
+                    "extractor_args": {"youtube": {"skip": ["hls", "dash"]}}}
             if key[1]:
                 opts["cookiesfrombrowser"] = (key[1],)
             ydl = yt_dlp.YoutubeDL(opts)
@@ -117,6 +122,20 @@ type ytCall struct {
 	done chan struct{}
 	res  YTResolved
 	err  error
+}
+
+// ytRun resolves one page; tests replace it.
+var ytRun = func(ctx context.Context, pageURL string, prio int) (YTResolved, error) {
+	return ytres.run(ctx, pageURL, prio)
+}
+
+// inflightKey keeps one call per page and priority: a click must not wait
+// behind a prefetch of the same page that sits in the low-priority queue.
+func inflightKey(key string, prio int) string {
+	if prio == 0 {
+		return key + "|now"
+	}
+	return key
 }
 
 type ytHelper struct {
@@ -219,8 +238,9 @@ func resolveYT(ctx context.Context, pageURL string, prio int) (YTResolved, error
 		return r, nil
 	}
 	key := ytCacheKey(pageURL)
+	ikey := inflightKey(key, prio)
 	ytres.mu.Lock()
-	if c, ok := ytres.inflight[key]; ok {
+	if c, ok := ytres.inflight[ikey]; ok {
 		ytres.mu.Unlock()
 		select {
 		case <-c.done:
@@ -229,13 +249,44 @@ func resolveYT(ctx context.Context, pageURL string, prio int) (YTResolved, error
 			return YTResolved{}, ctx.Err()
 		}
 	}
+	// A prefetch of the same page may finish first: a click takes whichever
+	// answer comes first.
+	var background <-chan struct{}
+	var bg *ytCall
+	if prio == 0 {
+		if b, ok := ytres.inflight[inflightKey(key, 1)]; ok {
+			bg, background = b, b.done
+		}
+	}
 	c := &ytCall{done: make(chan struct{})}
-	ytres.inflight[key] = c
+	ytres.inflight[ikey] = c
 	ytres.mu.Unlock()
 
-	c.res, c.err = ytres.run(ctx, pageURL, prio)
+	if background != nil {
+		own := make(chan struct{})
+		var res YTResolved
+		var err error
+		run := ytRun
+		go func() {
+			res, err = run(ctx, pageURL, prio)
+			close(own)
+		}()
+		select {
+		case <-background:
+			if bg.err == nil {
+				c.res, c.err = bg.res, nil
+				break
+			}
+			<-own
+			c.res, c.err = res, err
+		case <-own:
+			c.res, c.err = res, err
+		}
+	} else {
+		c.res, c.err = ytRun(ctx, pageURL, prio)
+	}
 	ytres.mu.Lock()
-	delete(ytres.inflight, key)
+	delete(ytres.inflight, ikey)
 	if c.err == nil {
 		if _, ok := ytres.cache[key]; !ok {
 			ytres.order = append(ytres.order, key)
@@ -320,9 +371,30 @@ func resolveWithCommand(ctx context.Context, pageURL string) (YTResolved, error)
 	return resolvedFrom(ytHelperReply{URL: lines[3], Duration: dur, Protocol: lines[1], UA: lines[2]})
 }
 
+// bundledPython and bundledZipapp are a Python and a yt-dlp zipapp shipped
+// with Kalulu. The Windows installer carries them: its yt-dlp.exe is a
+// frozen binary, which would start for every track.
+var bundledPython, bundledZipapp string
+
+// UseBundledYTDLP makes the resolver load the yt-dlp zipapp with python,
+// before any yt-dlp on PATH.
+func UseBundledYTDLP(python, zipapp string) {
+	bundledPython, bundledZipapp = python, zipapp
+}
+
+// WarmYT starts the yt-dlp helper in the background, so the first track
+// does not wait for Python to load yt-dlp. It stops again after
+// ytResolveIdle without requests.
+func WarmYT() {
+	go ytres.ensureHelper()
+}
+
 // ytdlpPythonPath finds the Python of the yt-dlp script and the path that
 // lets it import yt_dlp (the script's own file for a zipapp).
 func ytdlpPythonPath() (python, sysPath string, ok bool) {
+	if bundledPython != "" {
+		return bundledPython, bundledZipapp, true
+	}
 	bin, err := exec.LookPath("yt-dlp")
 	if err != nil {
 		return "", "", false

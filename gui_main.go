@@ -69,6 +69,7 @@ func runGUI(overrides config.Overrides, positional []string, background bool, ro
 	}
 	setupDiagnostics()
 	tuneMemory()
+	warmBundledYTDLP()
 	updateBundledYTDLP()
 
 	positional, err = searchArgs(positional)

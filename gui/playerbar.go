@@ -321,6 +321,9 @@ type roundButton struct {
 	size    float32
 	onTap   func()
 	hovered bool
+	// onHover, when set, tells the widget around the button that the
+	// pointer entered or left it.
+	onHover func(in bool)
 }
 
 func newRoundButton(res fyne.Resource, size float32, tapped func()) *roundButton {
@@ -356,11 +359,17 @@ func (r *roundButton) Tapped(*fyne.PointEvent) {
 func (r *roundButton) MouseIn(*desktop.MouseEvent) {
 	r.hovered = true
 	r.Refresh()
+	if r.onHover != nil {
+		r.onHover(true)
+	}
 }
 func (r *roundButton) MouseMoved(*desktop.MouseEvent) {}
 func (r *roundButton) MouseOut() {
 	r.hovered = false
 	r.Refresh()
+	if r.onHover != nil {
+		r.onHover(false)
+	}
 }
 func (r *roundButton) Cursor() desktop.Cursor { return desktop.PointerCursor }
 

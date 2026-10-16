@@ -22,7 +22,9 @@ func (h *hoverPrefetch) in() {
 	if h.timer != nil {
 		h.timer.Stop()
 	}
-	h.timer = time.AfterFunc(350*time.Millisecond, func() { player.PrefetchYT(u) })
+	// Short enough to start well before the click, long enough to skip
+	// the rows the pointer only sweeps across.
+	h.timer = time.AfterFunc(150*time.Millisecond, func() { player.PrefetchYT(u) })
 }
 
 func (h *hoverPrefetch) out() {

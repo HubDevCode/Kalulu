@@ -21,13 +21,14 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
 // KaluluVersion is the version of Kalulu, set at build time with
 // -ldflags "-X github.com/bjarneo/cliamp/gui.KaluluVersion=1.2.3".
-var KaluluVersion = "2.5.2"
+var KaluluVersion = "2.5.3"
 
 // updateRepo is the GitHub repository of the releases.
 const updateRepo = "HubDevCode/Kalulu"
@@ -252,7 +253,7 @@ func (a *App) updatesCard() fyne.CanvasObject {
 						body = body[:900] + "…"
 					}
 					notes.SetText(body)
-					a.updateActions(actions, r)
+					a.updateActions(actions, r, nil)
 				}
 			})
 		}()
@@ -261,15 +262,16 @@ func (a *App) updatesCard() fyne.CanvasObject {
 	auto.Checked = a.prefs.BoolWithFallback(prefUpdateAuto, true)
 	return settingsCard(T("Updates"),
 		setRow(T("Installed version"), "", label("Kalulu "+KaluluVersion+" · cliamp "+a.opts.Version)),
-		setRow(T("Check automatically"), T("Once a day, in the background; playback is never interrupted"), auto),
+		setRow(T("Check automatically"), T("Every time Kalulu starts, in the background; playback is never interrupted"), auto),
 		container.NewHBox(flatButton(T("Check now"), theme.ViewRefreshIcon(), check)),
 		status, notes, actions,
 	)
 }
 
 // updateActions offers the release page, and a verified download when the
-// release has a package for this system.
-func (a *App) updateActions(box *fyne.Container, r release) {
+// release has a package for this system. started, when set, runs as the
+// download starts.
+func (a *App) updateActions(box *fyne.Container, r release, started func()) {
 	box.Objects = nil
 	if u, err := url.Parse(r.Page); err == nil {
 		box.Add(flatButton(T("Open the release page"), theme.ComputerIcon(), func() { _ = a.fa.OpenURL(u) }))
@@ -277,6 +279,9 @@ func (a *App) updateActions(box *fyne.Container, r release) {
 	pkg, sums := pickAsset(r)
 	if pkg != nil {
 		box.Add(flatButton(T("Download and verify"), theme.DownloadIcon(), func() {
+			if started != nil {
+				started()
+			}
 			a.toast(T("Downloading the update…"))
 			go func() {
 				dir := filepath.Join(userDownloads(), "Kalulu")
@@ -341,23 +346,43 @@ func (a *App) runInstaller(path string) {
 	a.quit()
 }
 
-// autoCheckUpdates checks once a day and tells the user about a newer
-// release, without touching anything.
+// autoCheckUpdates checks at every start and, when a newer release is out,
+// opens the update panel. Nothing is downloaded without the user.
 func (a *App) autoCheckUpdates() {
 	if !a.prefs.BoolWithFallback(prefUpdateAuto, true) {
 		return
 	}
-	if last, err := time.Parse(time.RFC3339, a.prefs.String(prefUpdateLast)); err == nil && time.Since(last) < 24*time.Hour {
-		return
-	}
 	go func() {
-		time.Sleep(20 * time.Second)
+		// Let the window and the first track start first.
+		time.Sleep(3 * time.Second)
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 		r, err := latestRelease(ctx)
 		a.prefs.SetString(prefUpdateLast, time.Now().Format(time.RFC3339))
 		if err == nil && newerVersion(r.Tag, KaluluVersion) {
-			a.toast(fmt.Sprintf(T("Kalulu %s is available: Settings → Updates"), r.Tag))
+			runOnUI(func() { a.showUpdateAvailable(r) })
 		}
 	}()
+}
+
+// showUpdateAvailable is the panel of a newer release: its version, its
+// notes, and the download.
+func (a *App) showUpdateAvailable(r release) {
+	msg := widget.NewLabel(fmt.Sprintf(T("Kalulu %s is available, published on %s."), r.Tag, r.Published.Local().Format("02/01/2006")) +
+		"\n" + fmt.Sprintf(T("You have version %s."), KaluluVersion))
+	msg.Wrapping = fyne.TextWrapWord
+	body := strings.TrimSpace(r.Body)
+	if len(body) > 2000 {
+		body = body[:2000] + "…"
+	}
+	notes := widget.NewRichTextFromMarkdown(body)
+	notes.Wrapping = fyne.TextWrapWord
+	scroll := container.NewVScroll(notes)
+	scroll.SetMinSize(fyne.NewSize(0, 220))
+	actions := container.NewHBox()
+	var d dialog.Dialog
+	a.updateActions(actions, r, func() { d.Hide() })
+	d = dialog.NewCustom(T("Update available"), T("Later"), container.NewBorder(msg, actions, nil, nil, scroll), a.win)
+	d.Resize(fyne.NewSize(560, 440))
+	d.Show()
 }

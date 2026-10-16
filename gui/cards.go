@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -35,8 +36,16 @@ type card struct {
 	onPlay  func()
 	onMenu  func(pos fyne.Position)
 	hovered bool
-	hover   hoverPrefetch
+	// overPlay is set while the pointer is on the play button. Fyne then
+	// sends MouseOut to the card, which must keep the button shown.
+	overPlay bool
+	settle   *time.Timer
+	hover    hoverPrefetch
 }
+
+// hoverSettle is how long a card waits after MouseOut before it hides its
+// play button: long enough for the button's MouseIn to arrive.
+const hoverSettle = 80 * time.Millisecond
 
 // newCard builds a card. circle draws the cover round, for artists.
 func newCard(a *App, title, sub, thumb string, circle bool, onOpen, onPlay func()) *card {
@@ -62,6 +71,12 @@ func newCard(a *App, title, sub, thumb string, circle bool, onOpen, onPlay func(
 			c.onPlay()
 		}
 	})
+	c.play.onHover = func(in bool) {
+		c.overPlay = in
+		if !in {
+			c.settleHover()
+		}
+	}
 	c.play.Hide()
 	c.ExtendBaseWidget(c)
 	return c
@@ -97,21 +112,49 @@ func (c *card) TappedSecondary(ev *fyne.PointEvent) {
 func (c *card) MouseIn(*desktop.MouseEvent) {
 	c.hover.in()
 	c.hovered = true
-	c.bg.FillColor = theme.Color(theme.ColorNameHover)
-	c.bg.Refresh()
-	if c.onPlay != nil {
-		c.play.Show()
-	}
+	c.showHover(true)
 }
 
 func (c *card) MouseMoved(*desktop.MouseEvent) {}
 
+// MouseOut also comes when the pointer moves onto the play button, so the
+// card hides its hover only once the pointer is on neither.
 func (c *card) MouseOut() {
-	c.hover.out()
 	c.hovered = false
-	c.bg.FillColor = color.Transparent
-	c.bg.Refresh()
-	c.play.Hide()
+	c.settleHover()
+}
+
+func (c *card) settleHover() {
+	if c.settle != nil {
+		c.settle.Stop()
+	}
+	c.settle = time.AfterFunc(hoverSettle, func() { runOnUI(c.settleNow) })
+}
+
+// settleNow hides the hover once the pointer is on neither the card nor
+// its play button.
+func (c *card) settleNow() {
+	if !c.hovered && !c.overPlay {
+		c.hover.out()
+		c.showHover(false)
+	}
+}
+
+func (c *card) showHover(on bool) {
+	fill := color.Color(color.Transparent)
+	if on {
+		fill = theme.Color(theme.ColorNameHover)
+	}
+	if c.bg.FillColor != fill {
+		c.bg.FillColor = fill
+		c.bg.Refresh()
+	}
+	switch {
+	case on && c.onPlay != nil && !c.play.Visible():
+		c.play.Show()
+	case !on && c.play.Visible():
+		c.play.Hide()
+	}
 }
 
 func (c *card) Cursor() desktop.Cursor { return desktop.PointerCursor }

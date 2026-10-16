@@ -18,6 +18,7 @@
   <url type="homepage">https://github.com/HubDevCode/Kalulu</url>
   <url type="bugtracker">https://github.com/HubDevCode/Kalulu/issues</url>
   <releases>
+    <release version="2.5.3" date="2026-10-16"/>
     <release version="2.5.2" date="2026-10-16"/>
     <release version="2.5.1" date="2026-10-16"/>
     <release version="2.5.0" date="2026-10-16"/>

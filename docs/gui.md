@@ -51,7 +51,7 @@ appends similar songs by itself (Settings → Playback).
 
 | Feature | What it does |
 | --- | --- |
-| Fast start | YouTube tracks play from their direct audio URL, resolved by one yt-dlp process that stays loaded while you listen (it exits after 90 s without requests). The next tracks of the queue, and a song the pointer rests on, are resolved in advance, so a click usually starts the music in under a second and seeking is instant. Other yt-dlp sites keep the yt-dlp pipe |
+| Fast start | YouTube tracks play from their direct audio URL, resolved by one yt-dlp process that stays loaded while you listen (it exits after 15 minutes without requests). The next tracks of the queue, and a song the pointer rests on, are resolved in advance, so a click usually starts the music in under a second and seeking is instant. Other yt-dlp sites keep the yt-dlp pipe |
 | Session | Kalulu reopens with the queue and the track of the last run, paused where it stopped (`kalulu-session.json` in the config directory) |
 | Preload | The next track opens before the end, so the change is gapless |
 | Silence skip | The silence at the start and at the end of every track is skipped. Settings → Playback sets the threshold and the minimum length |
@@ -138,11 +138,13 @@ serves the Go profiler for a performance report.
 
 ## Updates
 
-Settings → Updates checks the releases of
-[HubDevCode/Kalulu](https://github.com/HubDevCode/Kalulu) by hand or once a
-day. It shows the version, the date and the notes, opens the release page,
-and downloads the AppImage. A download is installed only when it matches
-the `SHA256SUMS` of the same release.
+Kalulu checks the releases of
+[HubDevCode/Kalulu](https://github.com/HubDevCode/Kalulu) every time it
+starts. When a newer one is out, a panel shows its version, date and notes,
+with the release page and the download of the AppImage or the Windows
+installer. Settings → Updates checks by hand, and can turn the check at
+start off. A download is installed only when it matches the `SHA256SUMS`
+of the same release.
 
 ## Keyboard
 
@@ -234,10 +236,14 @@ mingw-w64 gcc, pkg-config, flac, libvorbis, libogg and mpg123, and
 how to cross-compile it on Linux.
 
 The installer carries `kalulu.exe`, its codec libraries, and the playback
-tools in `tools\`: `yt-dlp.exe`, and `ffmpeg.exe` and `ffprobe.exe` with
-their libraries. Each one is checked against the checksums of its release.
-Kalulu puts `tools\` first in its `PATH`, and the bundled yt-dlp updates
-itself once a day, as YouTube changes often. Kalulu installs for the current
+tools in `tools\`: `yt-dlp.exe`, the yt-dlp zipapp `yt-dlp.pyz` with an
+embeddable Python, and `ffmpeg.exe` and `ffprobe.exe` with their libraries.
+Each one is checked against the checksums of its release, and the Python
+against the hash pinned in the script. Kalulu puts `tools\` first in its
+`PATH`. `yt-dlp.exe` is a frozen binary that unpacks itself on every call,
+so YouTube tracks resolve through the zipapp instead, loaded once in the
+bundled Python as on Linux: a track starts in a second or two. The bundled
+yt-dlp updates itself once a day, as YouTube changes often. Kalulu installs for the current
 user by default, in `%LOCALAPPDATA%\Programs\Kalulu`; the installer can also
 install for all users. Settings and data stay in `%APPDATA%\cliamp`.
 
