@@ -5,7 +5,7 @@
 <h1 align="center">Kalulu</h1>
 
 <p align="center">
-  A modern, light and complete music player for Linux.<br>
+  A modern, light and complete music player for Linux and Windows.<br>
   YouTube Music, radio, podcasts, local files and your own services, with a DJ Mixer, word-by-word synced lyrics and listening together on your local network.
 </p>
 
