@@ -35,6 +35,8 @@ A new look, drawn from the Kalulu mobile design and rebuilt for the desktop:
 - **Full screen** button at the right end of the player bar; leaving full screen no longer cuts the window edges.
 - Smoother lyrics: lines fade gradually with their distance from the sung one.
 
+![The full screen player with the turning vinyl and the synced lyrics](docs/images/kalulu-fullscreen.png)
+
 ![Search with the genre tiles](docs/images/kalulu-search.png)
 
 ## Features
