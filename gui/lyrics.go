@@ -186,14 +186,6 @@ func (l *lyricsView) update(s ipc.RuntimeSnapshot) {
 	}
 }
 
-// lineAt returns the synced line at position, for the now playing panel.
-func (l *lyricsView) lineAt(position float64) string {
-	if !l.synced || l.current < 0 || l.current >= len(l.lines) {
-		return ""
-	}
-	return strings.TrimSpace(l.lines[l.current].Text)
-}
-
 func (l *lyricsView) scrollToCurrent() {
 	if l.current < 0 || l.current >= len(l.lines) {
 		return

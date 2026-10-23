@@ -28,7 +28,7 @@ import (
 
 // KaluluVersion is the version of Kalulu, set at build time with
 // -ldflags "-X github.com/bjarneo/cliamp/gui.KaluluVersion=1.2.3".
-var KaluluVersion = "2.5.3"
+var KaluluVersion = "2.5.4"
 
 // updateRepo is the GitHub repository of the releases.
 const updateRepo = "HubDevCode/Kalulu"

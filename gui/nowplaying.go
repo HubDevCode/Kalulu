@@ -3,6 +3,7 @@ package gui
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -20,60 +21,59 @@ type nowPlayingPanel struct {
 	app  *App
 	root fyne.CanvasObject
 
-	art     *artView
-	title   *widget.Label
-	artist  *widget.Label
-	album   *widget.Label
-	extra   *widget.Label
-	lyric   *widget.Label
-	vis     *visualizer
-	upNext  *fyne.Container
-	content *fyne.Container
-	glow    *canvas.LinearGradient
-	lastKey string
-	nextKey string
+	art      *artView
+	title    *widget.Label
+	artist   *widget.Label
+	album    *widget.Label
+	extra    *widget.Label
+	lyric    *karaoke
+	lyricBox fyne.CanvasObject
+	lyricVer int
+	vis      *visualizer
+	queue    *widget.List
+	queueIdx []int // queue indexes in play order
+	content  *fyne.Container
+	bottom   fyne.CanvasObject
+	glow     *canvas.LinearGradient
+	lastKey  string
+	nextKey  string
 }
 
 func newNowPlayingPanel(a *App) *nowPlayingPanel {
 	n := &nowPlayingPanel{app: a}
-	n.art = newArtView(a, 300, 14)
+	n.art = newArtView(a, 0, 14)
 	n.art.image.FillMode = canvas.ImageFillCover
-	p := a.theme.p
-	n.glow = canvas.NewLinearGradient(mix(p.Surface, p.Accent, 0.25), p.Surface, 0)
+	// One themed gradient over the whole panel, from a shade of the
+	// accent to the surface: both ends follow the cover colors, so there
+	// is no seam where a fixed color met the tinted background.
+	n.glow = tGradient(rolePanelGlow, roleSurface)
 	n.art.onLoaded = func(img image.Image) {
 		a.setCoverImage(img)
 		a.followCover()
-		c := mix(p.Surface, p.Accent, 0.25)
-		if img != nil {
-			c = dominantColor(img)
-			if p.Light {
-				c = mix(c, p.Surface, 0.6)
-			}
-		}
-		n.glow.StartColor = c
-		n.glow.Refresh()
 	}
 	n.art.onTap = func() { a.show("player") }
 	n.title = heading(T("Nothing playing"))
 	n.title.SizeName = theme.SizeNameSubHeadingText
-	n.title.Wrapping = fyne.TextWrapWord
-	n.title.Truncation = fyne.TextTruncateOff
+	n.title.Truncation = fyne.TextTruncateEllipsis
 	n.artist = trunc(label(""))
 	n.artist.Importance = widget.HighImportance
 	n.album = trunc(dimLabel(""))
 	n.extra = captionLabel("")
-	n.extra.Wrapping = fyne.TextWrapWord
-	n.extra.Truncation = fyne.TextTruncateOff
-	n.lyric = label("")
-	n.lyric.Wrapping = fyne.TextWrapWord
-	n.lyric.Truncation = fyne.TextTruncateOff
-	n.lyric.TextStyle = fyne.TextStyle{Italic: true}
-	n.lyric.Hide()
+	n.extra.Truncation = fyne.TextTruncateEllipsis
+	// Three lines of the synced lyrics: the one before, the sung one with
+	// a glow, and the next.
+	n.lyric = newLyricTicker(a)
+	n.lyric.active = a.rightShown.Load
+	n.lyricVer = -1
+	clip := container.NewScroll(n.lyric)
+	clip.Direction = container.ScrollNone
+	n.lyricBox = padded(6, 0, 2, 0, fixed(0, 136, clip))
+	n.lyricBox.Hide()
 
 	n.vis = newVisualizer(a, false)
 	n.vis.active = a.rightShown.Load
 	n.vis.onTap = a.showFullVisualizer
-	visFrame := tPanel(roleSurface2, 12, padded(8, 8, 8, 8, fixed(0, 120, n.vis)))
+	visFrame := tPanel(roleSurface2, 12, padded(8, 8, 8, 8, fixed(0, 96, n.vis)))
 	visHeader := container.NewBorder(nil, nil, sectionTitle(T("Visualizer")),
 		container.NewHBox(
 			iconButton(theme.ViewFullScreenIcon(), a.showFullVisualizer),
@@ -100,21 +100,25 @@ func newNowPlayingPanel(a *App) *nowPlayingPanel {
 		addBtn,
 	)
 
-	n.upNext = container.NewVBox()
+	// The details and the lyrics stay at the top and the visualizer at the
+	// bottom; only the queue between them scrolls.
+	n.queue = widget.NewList(
+		func() int { return len(n.queueIdx) },
+		func() fyne.CanvasObject { return newTile(a, "", "", "", nil) },
+		n.updateQueueRow)
 	n.content = container.NewVBox(
-		container.NewCenter(n.art.Object()),
+		container.New(&panelHeadLayout{n: n}, n.art.Object(),
+			container.New(&tightVBox{}, n.title, n.artist, n.album, n.extra)),
+		actions,
+		n.lyricBox,
 		fixed(0, 4),
-		n.title, n.artist, n.album, n.extra, actions,
-		n.lyric,
-		fixed(0, 6),
-		visHeader, visFrame,
-		fixed(0, 6),
 		sectionTitle(T("Up next")),
-		n.upNext,
 	)
+	n.bottom = padded(8, 16, 14, 16, container.NewVBox(visHeader, visFrame))
 	bg := tRect(roleSurface)
-	glow := container.NewVBox(fixed(0, 520, n.glow))
-	n.root = container.NewStack(bg, glow, container.NewVScroll(padded(16, 16, 16, 16, n.content)))
+	n.lyric.Start()
+	n.root = container.NewStack(bg, n.glow, container.NewBorder(
+		padded(16, 16, 0, 16, n.content), n.bottom, nil, nil, padded(0, 10, 0, 10, n.queue)))
 	a.onState(n.update)
 	return n
 }
@@ -176,47 +180,118 @@ func (n *nowPlayingPanel) update(s ipc.RuntimeSnapshot) {
 	n.updateUpNext()
 }
 
-// updateLyric shows the current synced line under the details.
+// updateLyric follows the synced lyrics in the three-line ticker; it hides
+// without timed lyrics.
 func (n *nowPlayingPanel) updateLyric(s ipc.RuntimeSnapshot) {
-	line := n.app.lyrics.lineAt(s.Position)
-	if line == "" {
-		if !n.lyric.Hidden {
-			n.lyric.Hide()
-			n.content.Refresh()
+	l := n.app.lyrics
+	if l.version != n.lyricVer {
+		n.lyricVer = l.version
+		n.lyric.SetLines(l.lines, "")
+	}
+	show := s.Track != nil && hasTimings(l.lines)
+	if show == n.lyricBox.Visible() {
+		if show {
+			n.lyric.SetPosition(s.Position + l.offsetSecs())
 		}
 		return
 	}
-	if n.lyric.Text != "♪ "+line {
-		n.lyric.SetText("♪ " + line)
+	if show {
+		n.lyric.SetPosition(s.Position + l.offsetSecs())
+		n.lyricBox.Show()
+	} else {
+		n.lyricBox.Hide()
 	}
-	if n.lyric.Hidden {
-		n.lyric.Show()
-		n.content.Refresh()
-	}
+	n.content.Refresh()
 }
 
+// updateUpNext lists every track still to play.
 func (n *nowPlayingPanel) updateUpNext() {
-	next := n.app.queue.upcoming(5)
-	key := ""
-	for _, i := range next {
-		key += fmt.Sprintf("%d:%s|", i, n.app.queue.tracks.Tracks[i].Path)
-	}
+	q := n.app.queue
+	next := q.upcoming(len(q.all))
+	key := fmt.Sprint(next, n.app.state.PlaylistRevision)
 	if key == n.nextKey {
 		return
 	}
 	n.nextKey = key
-	n.upNext.Objects = nil
-	if len(next) == 0 {
-		n.upNext.Add(captionLabel(T("The queue ends here")))
-	}
-	for _, i := range next {
-		i := i
-		t := n.app.queue.tracks.Tracks[i]
-		title, sub := trackTitle(t)
-		btn := widget.NewButton("", func() { n.app.do("queue.play", P{"index": i}, nil) })
-		btn.Importance = widget.LowImportance
-		txt := container.New(&tightVBox{}, trunc(label(title)), trunc(captionLabel(sub)))
-		n.upNext.Add(container.NewStack(btn, padded(0, 4, 0, 4, txt)))
-	}
-	n.upNext.Refresh()
+	n.queueIdx = next
+	n.queue.Refresh()
 }
+
+func (n *nowPlayingPanel) updateQueueRow(id widget.ListItemID, obj fyne.CanvasObject) {
+	q := n.app.queue
+	if id >= len(n.queueIdx) || n.queueIdx[id] >= len(q.all) {
+		return
+	}
+	index := n.queueIdx[id]
+	t := q.all[index]
+	tl := obj.(*tile)
+	tl.onPlay = func() { n.app.do("queue.play", P{"index": index}, nil) }
+	title, sub := trackTitle(t)
+	tl.title.SetText(title)
+	tl.sub.SetText(sub)
+	tl.thumb, tl.loaded = t.AlbumArtURL, true
+	if t.AlbumArtURL != "" {
+		tl.art.LoadURL(t.AlbumArtURL)
+	} else {
+		tl.art.Load(t)
+	}
+}
+
+// panelHeadLayout places the cover and the details. With room to spare
+// the cover stands above the details, up to 300 points; on a short window
+// a small cover sits beside them, so the queue keeps space to scroll.
+type panelHeadLayout struct{ n *nowPlayingPanel }
+
+const (
+	panelQueueRoom = 180
+	panelSmallArt  = 88
+)
+
+// side is the cover size above the details, or 0 for the small cover.
+func (l *panelHeadLayout) side(details fyne.Size) float32 {
+	n := l.n
+	h := n.root.Size().Height
+	if h == 0 {
+		return 300
+	}
+	rest := float32(0)
+	for _, o := range n.content.Objects[1:] {
+		if o.Visible() {
+			rest += o.MinSize().Height + theme.Padding()
+		}
+	}
+	free := h - rest - n.bottom.MinSize().Height - panelQueueRoom - 32 - details.Height
+	side := min(300, free, n.content.Size().Width)
+	if side < 150 {
+		return 0
+	}
+	return side
+}
+
+func (l *panelHeadLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
+	d := objects[1].MinSize()
+	if s := l.side(d); s > 0 {
+		return fyne.NewSize(max(s, d.Width), s+4+d.Height)
+	}
+	return fyne.NewSize(panelSmallArt+12+d.Width, max(panelSmallArt, d.Height))
+}
+
+func (l *panelHeadLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
+	art, details := objects[0], objects[1]
+	d := details.MinSize()
+	if s := l.side(d); s > 0 {
+		art.Move(fyne.NewPos((size.Width-s)/2, 0))
+		art.Resize(fyne.NewSize(s, s))
+		details.Move(fyne.NewPos(0, s+4))
+		details.Resize(fyne.NewSize(size.Width, d.Height))
+		return
+	}
+	art.Move(fyne.NewPos(0, (size.Height-panelSmallArt)/2))
+	art.Resize(fyne.NewSize(panelSmallArt, panelSmallArt))
+	x := float32(panelSmallArt + 12)
+	details.Move(fyne.NewPos(x, (size.Height-d.Height)/2))
+	details.Resize(fyne.NewSize(size.Width-x, d.Height))
+}
+
+// rolePanelGlow is the top of the now playing panel gradient.
+var rolePanelGlow role = func(p Palette) color.Color { return mix(p.Surface, p.Accent, 0.2) }

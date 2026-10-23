@@ -24,6 +24,7 @@ type fullPlayer struct {
 	glow          *canvas.LinearGradient
 	glow2         *canvas.LinearGradient
 	art           *artView
+	vinyl         *vinyl
 	title         *widget.Label
 	artist        *widget.Label
 	album         *widget.Label
@@ -41,6 +42,7 @@ type fullPlayer struct {
 	drag          bool
 	seekAt        time.Time
 	nextKey       string
+	exitFull      *widget.Button
 }
 
 func newFullPlayer(a *App) *fullPlayer {
@@ -50,7 +52,9 @@ func newFullPlayer(a *App) *fullPlayer {
 	f.glow2 = canvas.NewLinearGradient(withAlpha(p.BG, 0), withAlpha(p.BG, 0xa0), 90)
 	f.art = newArtView(a, 360, 18)
 	f.art.image.FillMode = canvas.ImageFillCover
+	f.vinyl = newVinyl(a)
 	f.art.onLoaded = func(img image.Image) {
+		f.vinyl.SetImage(img)
 		c := mix(p.Accent, p.BG, 0.3)
 		if img != nil {
 			c = dominantColor(img)
@@ -103,11 +107,12 @@ func newFullPlayer(a *App) *fullPlayer {
 		flatButton("DJ", iconDJ, func() { a.show("dj") }),
 		spacer())
 
-	left := container.NewVBox(
-		container.New(&squareLayout{max: 420, app: a}, f.art.Object()),
+	left := container.NewVBox(spacer(),
+		container.New(&squareLayout{max: 420, app: a}, f.art.Object(), f.vinyl),
 		fixed(0, 8),
 		f.badge, f.title, f.artist, f.album,
 		fixed(0, 6), seekRow, controls, actions,
+		spacer(),
 	)
 
 	f.karaoke = newKaraoke(a)
@@ -125,10 +130,13 @@ func newFullPlayer(a *App) *fullPlayer {
 	)
 
 	back := flatButton(T("Back"), theme.NavigateBackIcon(), func() { a.show(a.prefs.StringWithFallback(prefLastSection, "home")) })
-	fullscreen := flatButton(T("Full screen"), theme.ViewFullScreenIcon(), func() { a.setImmersive(!a.immersive) })
+	// Full screen starts from the player bar, which full screen hides, so
+	// the way out shows only there.
+	f.exitFull = flatButton(T("Exit full screen"), theme.ViewRestoreIcon(), func() { a.setImmersive(false) })
+	f.exitFull.Hide()
 	body := container.New(&splitLayout{left: 0.46, gap: 36}, padded(0, 0, 0, 0, left), panel(withAlpha(p.Surface, 0x90), 16, padded(10, 10, 10, 10, f.tabs)))
 	f.root = container.NewStack(f.glow, f.glow2,
-		container.NewBorder(padded(10, 18, 0, 18, container.NewBorder(nil, nil, back, fullscreen)), nil, nil, nil, padded(4, 36, 24, 36, body)))
+		container.NewBorder(padded(10, 18, 0, 18, container.NewBorder(nil, nil, back, f.exitFull)), nil, nil, nil, padded(4, 36, 24, 36, body)))
 	a.onState(f.update)
 	return f
 }
@@ -136,6 +144,7 @@ func newFullPlayer(a *App) *fullPlayer {
 func (f *fullPlayer) Object() fyne.CanvasObject { return f.root }
 
 func (f *fullPlayer) Shown() {
+	f.applyCoverStyle()
 	f.key = ""
 	f.karaoke.Start()
 	f.update(f.app.state)
@@ -144,6 +153,7 @@ func (f *fullPlayer) Shown() {
 // Hidden stops the lyrics animation while another page shows.
 func (f *fullPlayer) Hidden() {
 	f.karaoke.Stop()
+	f.vinyl.Stop()
 	f.app.setImmersive(false)
 }
 
@@ -156,6 +166,10 @@ func (f *fullPlayer) update(s ipc.RuntimeSnapshot) {
 		f.play.SetIcon(theme.MediaPauseIcon())
 	} else {
 		f.play.SetIcon(theme.MediaPlayIcon())
+	}
+	if f.vinyl.Visible() {
+		f.vinyl.applyPalette(currentPalette())
+		f.vinyl.SetPlaying(s.State == "playing")
 	}
 	if s.Track != nil {
 		t := *s.Track
@@ -224,6 +238,18 @@ func (f *fullPlayer) update(s ipc.RuntimeSnapshot) {
 		f.upNext.Add(tl)
 	}
 	f.upNext.Refresh()
+}
+
+// applyCoverStyle shows the cover or the record, as the setting asks.
+func (f *fullPlayer) applyCoverStyle() {
+	if f.app.coverStyle() == coverStyleVinyl {
+		f.art.Object().Hide()
+		f.vinyl.Show()
+	} else {
+		f.vinyl.Stop()
+		f.vinyl.Hide()
+		f.art.Object().Show()
+	}
 }
 
 // squareLayout sizes its child as a square that fits the width and leaves

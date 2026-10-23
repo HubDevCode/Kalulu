@@ -3,6 +3,7 @@ package gui
 import (
 	"context"
 	"fmt"
+	"image/color"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -38,19 +39,39 @@ func newSearchView(a *App) *searchView {
 	s := &searchView{app: a, keys: map[string]string{}}
 	s.entry = widget.NewEntry()
 	s.entry.SetPlaceHolder(T("What do you want to listen to?"))
-	s.entry.ActionItem = widget.NewIcon(theme.SearchIcon())
 	s.entry.OnSubmitted = func(q string) { s.run(q) }
 	s.entry.OnChanged = s.suggest
 	s.popBox = container.NewVBox()
 	s.body = container.NewVBox()
-	bar := fixed(0, 44, s.entry)
+	// The search bar is a field of the accent color, as the mobile design,
+	// with Cancel beside it.
+	barBG := tRect(roleAccent)
+	barBG.CornerRadius = 10
+	glass := container.NewThemeOverride(container.NewBorder(nil, nil,
+		padded(0, 0, 0, 10, widget.NewIcon(theme.SearchIcon())), nil, s.entry), searchBarTheme{})
+	bar := fixed(0, 44, container.NewStack(barBG, glass))
+	cancel := flatButton(T("Cancel"), nil, func() {
+		s.entry.SetText("")
+		s.lastRun = ""
+		s.hideSuggestions()
+		s.showBrowse()
+	})
+	top := padded(18, 24, 14, 24, container.NewBorder(nil, nil, nil, padded(0, 0, 0, 8, cancel), bar))
 	// The suggestions float over the results inside the page, not in a
 	// Fyne pop-up: a pop-up takes the keyboard focus from the entry, and
 	// the letters typed next went to the shortcuts.
 	s.popup = padded(0, 24, 0, 24, tPanel(roleOverlay, 10, padded(4, 4, 4, 4, s.popBox)))
 	s.popup.Hide()
-	results := container.NewStack(scrollPage(s.body), container.NewVBox(s.popup))
-	s.root = container.NewBorder(padded(18, 24, 10, 24, bar), nil, nil, nil, results)
+	// Browse and the results sit on a sheet with a grab handle.
+	sheetBG := tRect(roleSheet)
+	sheetBG.TopLeftCornerRadius = 22
+	sheetBG.TopRightCornerRadius = 22
+	handle := tRect(roleBorder)
+	handle.CornerRadius = 3
+	grip := padded(10, 0, 4, 0, container.NewCenter(fixed(44, 5, handle)))
+	sheet := container.NewStack(sheetBG, container.NewBorder(grip, nil, nil, nil, scrollPage(s.body)))
+	results := container.NewStack(padded(0, 16, 0, 16, sheet), container.NewVBox(s.popup))
+	s.root = container.NewBorder(top, nil, nil, nil, results)
 	return s
 }
 
@@ -93,7 +114,7 @@ func (s *searchView) showBrowse() {
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
-			obj, err := s.app.moodsGrid(ctx, 0)
+			obj, err := s.app.categoryGrid(ctx)
 			runOnUI(func() {
 				if err != nil {
 					s.browse = nil
@@ -344,4 +365,46 @@ func (l *splitLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
 	objects[0].Resize(fyne.NewSize(lw, size.Height))
 	objects[1].Move(fyne.NewPos(lw+l.gap, 0))
 	objects[1].Resize(fyne.NewSize(size.Width-lw-l.gap, size.Height))
+}
+
+// roleSheet fills the sheet under the search bar.
+var roleSheet role = func(p Palette) color.Color { return mix(p.Surface, p.Surface2, 0.6) }
+
+// searchBarTheme draws the entry flat on the accent bar, with text that
+// stays readable on the accent of the moment.
+type searchBarTheme struct{}
+
+func (searchBarTheme) Color(n fyne.ThemeColorName, v fyne.ThemeVariant) color.Color {
+	base := fyne.CurrentApp().Settings().Theme()
+	acc := currentPalette().Accent
+	on := color.NRGBA{0x12, 0x10, 0x18, 0xff}
+	if luminance(acc) < 0.45 {
+		on = color.NRGBA{0xff, 0xff, 0xff, 0xff}
+	}
+	switch n {
+	case theme.ColorNameInputBackground, theme.ColorNameInputBorder, theme.ColorNameHover, theme.ColorNameFocus:
+		return color.Transparent
+	case theme.ColorNameForeground, theme.ColorNamePrimary:
+		return on
+	case theme.ColorNamePlaceHolder:
+		return withAlpha(on, 0xb0)
+	case theme.ColorNameSelection:
+		return withAlpha(on, 0x40)
+	}
+	return base.Color(n, v)
+}
+
+func (searchBarTheme) Font(s fyne.TextStyle) fyne.Resource {
+	return fyne.CurrentApp().Settings().Theme().Font(s)
+}
+
+func (searchBarTheme) Icon(n fyne.ThemeIconName) fyne.Resource {
+	return fyne.CurrentApp().Settings().Theme().Icon(n)
+}
+
+func (searchBarTheme) Size(n fyne.ThemeSizeName) float32 {
+	if n == theme.SizeNameInputBorder {
+		return 0
+	}
+	return fyne.CurrentApp().Settings().Theme().Size(n)
 }

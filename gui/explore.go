@@ -366,6 +366,9 @@ func (a *App) itemCard(it discover.Item) fyne.CanvasObject {
 	}
 	c := newCard(a, it.Title, sub, it.Thumb, it.Kind == discover.KindArtist,
 		func() { a.openItem(it) }, func() { a.playItem(it) })
+	if it.Kind == discover.KindAlbum {
+		c.withRecord(a)
+	}
 	if it.Playable() {
 		c.hover.url = it.WatchURL()
 	}

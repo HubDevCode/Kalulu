@@ -35,6 +35,7 @@ var themed struct {
 	sync.Mutex
 	rects     []themedRect
 	gradients []themedGradient
+	circles   []themedCircle
 	current   Palette
 	live      int // surfaces alive at the last prune
 }
@@ -45,6 +46,11 @@ var themed struct {
 type themedRect struct {
 	r    weak.Pointer[canvas.Rectangle]
 	role role
+}
+
+type themedCircle struct {
+	c            weak.Pointer[canvas.Circle]
+	fill, stroke role // nil keeps the color
 }
 
 type themedGradient struct {
@@ -65,7 +71,7 @@ func tRect(r role) *canvas.Rectangle {
 // pruneThemed drops the collected surfaces once the list doubles. It runs
 // with themed locked.
 func pruneThemed() {
-	n := len(themed.rects) + len(themed.gradients)
+	n := len(themed.rects) + len(themed.gradients) + len(themed.circles)
 	if n < 64 || n < 2*themed.live {
 		return
 	}
@@ -85,7 +91,36 @@ func pruneThemed() {
 	}
 	clear(themed.gradients[len(grads):])
 	themed.gradients = grads
-	themed.live = len(rects) + len(grads)
+	circles := themed.circles[:0]
+	for _, t := range themed.circles {
+		if t.c.Value() != nil {
+			circles = append(circles, t)
+		}
+	}
+	clear(themed.circles[len(circles):])
+	themed.circles = circles
+	themed.live = len(rects) + len(grads) + len(circles)
+}
+
+// tCircle returns a circle whose fill and stroke follow the palette; a nil
+// role leaves that color transparent.
+func tCircle(fill, stroke role) *canvas.Circle {
+	themed.Lock()
+	defer themed.Unlock()
+	c := canvas.NewCircle(color.Transparent)
+	paintCircle(c, fill, stroke, themed.current)
+	themed.circles = append(themed.circles, themedCircle{weak.Make(c), fill, stroke})
+	pruneThemed()
+	return c
+}
+
+func paintCircle(c *canvas.Circle, fill, stroke role, p Palette) {
+	if fill != nil {
+		c.FillColor = fill(p)
+	}
+	if stroke != nil {
+		c.StrokeColor = stroke(p)
+	}
 }
 
 // tPanel is panel with a themed fill.
@@ -111,6 +146,7 @@ func resetThemed(p Palette) {
 	defer themed.Unlock()
 	themed.rects = nil
 	themed.gradients = nil
+	themed.circles = nil
 	themed.live = 0
 	themed.current = p
 }
@@ -144,7 +180,14 @@ func recolor(p Palette) {
 	themed.current = p
 	rects := append([]themedRect(nil), themed.rects...)
 	grads := append([]themedGradient(nil), themed.gradients...)
+	circles := append([]themedCircle(nil), themed.circles...)
 	themed.Unlock()
+	for _, t := range circles {
+		if c := t.c.Value(); c != nil {
+			paintCircle(c, t.fill, t.stroke, p)
+			c.Refresh()
+		}
+	}
 	for _, t := range rects {
 		r := t.r.Value()
 		if r == nil {

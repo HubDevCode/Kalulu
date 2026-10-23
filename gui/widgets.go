@@ -523,6 +523,9 @@ type navItem struct {
 	selected bool
 	hovered  bool
 	onTap    func()
+	// chevron shows an arrow at the right edge, as the menu rows of the
+	// sidebar footer.
+	chevron *widget.Icon
 }
 
 func newNavItem(key string, res fyne.Resource, text string, onTap func()) *navItem {
@@ -539,7 +542,11 @@ func newNavItem(key string, res fyne.Resource, text string, onTap func()) *navIt
 }
 
 func (n *navItem) CreateRenderer() fyne.WidgetRenderer {
-	row := container.NewBorder(nil, nil, padded(0, 0, 0, 6, n.icon), nil, n.text)
+	var right fyne.CanvasObject
+	if n.chevron != nil {
+		right = n.chevron
+	}
+	row := container.NewBorder(nil, nil, padded(0, 0, 0, 6, n.icon), right, n.text)
 	bar := container.NewBorder(nil, nil, fixed(3, 0, padded(9, 0, 9, 0, n.bar)), nil)
 	return widget.NewSimpleRenderer(container.NewStack(n.bg, bar, padded(0, 6, 0, 6, row)))
 }
@@ -551,6 +558,15 @@ func (n *navItem) setCompact(compact bool) {
 	} else {
 		n.text.Show()
 	}
+	if n.chevron != nil {
+		n.chevron.Hidden = compact
+	}
+}
+
+// withChevron adds the arrow of a menu row; call it before the item shows.
+func (n *navItem) withChevron() *navItem {
+	n.chevron = widget.NewIcon(iconChevron)
+	return n
 }
 
 func (n *navItem) setSelected(v bool) {

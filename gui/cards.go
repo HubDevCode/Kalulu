@@ -41,6 +41,8 @@ type card struct {
 	overPlay bool
 	settle   *time.Timer
 	hover    hoverPrefetch
+	// record shows the disc of an album beside the cover.
+	record bool
 }
 
 // hoverSettle is how long a card waits after MouseOut before it hides its
@@ -84,7 +86,10 @@ func newCard(a *App, title, sub, thumb string, circle bool, onOpen, onPlay func(
 
 func (c *card) CreateRenderer() fyne.WidgetRenderer {
 	playLayer := container.NewVBox(spacer(), container.NewHBox(spacer(), c.play))
-	cover := container.NewStack(c.art.Object(), padded(0, 4, 4, 0, playLayer))
+	var cover fyne.CanvasObject = container.NewStack(c.art.Object(), padded(0, 4, 4, 0, playLayer))
+	if c.record {
+		cover = container.NewHBox(container.New(recordLayout{}, recordDisc(), c.art.Object(), padded(0, 4, 4, 0, playLayer)))
+	}
 	body := container.NewVBox(cover, container.New(&tightVBox{}, c.title, c.sub))
 	return widget.NewSimpleRenderer(container.NewStack(c.bg, padded(8, 8, 8, 8, body)))
 }

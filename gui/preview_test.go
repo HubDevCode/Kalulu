@@ -114,6 +114,7 @@ func TestPreview(t *testing.T) {
 		{"queue-narrow", "queue", 760, 640},
 		{"browse", "provider:local", 1400, 860},
 		{"player", "player", 1400, 860},
+		{"vinyl", "player", 1400, 860},
 		{"eq", "eq", 1400, 900},
 		{"settings", "settings", 1400, 900},
 		{"search", "search", 1200, 760},
@@ -134,6 +135,12 @@ func TestPreview(t *testing.T) {
 			a.setPalette(paletteLight)
 		case "winamp":
 			a.setPalette("Winamp")
+		case "vinyl":
+			a.prefs.SetString(prefCoverStyle, coverStyleVinyl)
+			cover := image.NewRGBA(image.Rect(0, 0, 64, 64))
+			draw.Draw(cover, cover.Bounds(), &image.Uniform{color.NRGBA{200, 60, 40, 255}}, image.Point{}, draw.Src)
+			draw.Draw(cover, image.Rect(24, 8, 40, 56), &image.Uniform{color.NRGBA{240, 220, 80, 255}}, image.Point{}, draw.Src)
+			a.views["player"].(*fullPlayer).vinyl.SetImage(cover)
 		}
 		a.show(s.view)
 		a.applyState(demoState())

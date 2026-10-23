@@ -80,8 +80,12 @@ the best answer, word-timed over line-timed over plain, matched by title,
 artist and duration, and remembers it in `~/.cache/kalulu/lyrics`.
 Musixmatch is left out: without an account it answers with decoy lyrics.
 
-Click the cover of the player bar for the player view with the lyrics; its
-button opens it full screen. The gear under the lyrics looks them up again,
+Click the cover of the player bar for the player view with the lyrics; the
+full screen button at the right end of the player bar opens it full screen,
+and Esc or Exit full screen leaves. The now playing panel shows three lines
+of synced lyrics: the one before, the sung one with a glow, and the next.
+Under them the whole queue scrolls, and the visualizer stays at the bottom.
+The gear under the lyrics looks them up again,
 picks one source, and moves them earlier or later. The size, alignment and
 animation are in Settings → Lyrics.
 
@@ -113,7 +117,10 @@ the router. A dropped guest reconnects by itself with the same role.
 The colors of the window follow the cover of the playing track, with a
 guaranteed text contrast and a gradual change (Settings → Personalization).
 The same section sets the theme, density, text size and reduced motion, and
-resets the interface after a confirmation. Settings → Home and services
+resets the interface after a confirmation. Its Player cover setting shows
+the cover on the player page, or a vinyl record with the cover as its label:
+the record turns while the track plays and the tonearm lifts on pause.
+Settings → Home and services
 shows or hides each sidebar entry and library service.
 
 Desktop notifications are all off by default: Settings → Notifications

@@ -31,7 +31,8 @@ type homeView struct {
 func newHomeView(a *App) *homeView {
 	h := &homeView{app: a}
 	h.body = container.NewVBox()
-	h.scroll = scrollPage(h.body)
+	// The header runs to the edges; the sections keep the page margins.
+	h.scroll = container.NewVScroll(padded(0, 0, 24, 0, h.body))
 	h.scroll.OnScrolled = func(fyne.Position) { h.loadVisible() }
 	h.root = container.NewStack(h.scroll)
 	return h
@@ -139,7 +140,7 @@ func (h *homeView) reload() {
 	var where *widget.Button
 	where = flatButton(countryName(country), iconGlobe, func() { a.showCountryMenu(where) })
 	glow := tGradient(func(p Palette) color.Color { return mix(p.Accent, p.BG, 0.55) }, roleBG)
-	header := container.NewStack(glow, padded(26, 24, 18, 24,
+	header := container.NewStack(glow, padded(26, 48, 18, 48,
 		container.NewBorder(nil, nil, nil, container.NewVBox(where), container.NewVBox(title, sub))))
 
 	loaders := map[string]func(ctx context.Context) (fyne.CanvasObject, error){
@@ -201,7 +202,7 @@ func (h *homeView) reload() {
 	h.body.Objects = []fyne.CanvasObject{header}
 	for _, key := range a.homeOrder() {
 		if load, ok := loaders[key]; ok {
-			w := padded(0, 24, 0, 24, h.section(load))
+			w := padded(0, 48, 0, 48, h.section(load))
 			h.pending[len(h.pending)-1].anchor = w
 			h.body.Add(w)
 		}

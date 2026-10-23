@@ -207,6 +207,9 @@ func (a *App) applyNavVisibility() {
 	if a.navBox != nil {
 		a.navBox.Refresh()
 	}
+	for _, c := range a.navCards {
+		c.Refresh()
+	}
 }
 
 // resetAppearance restores the interface preferences after a confirmation;
@@ -218,7 +221,7 @@ func (a *App) resetAppearance() {
 		}
 		for _, key := range []string{prefPalette, prefHomeSections, prefHiddenNav, prefHiddenSrc, prefDensity, prefTextScale,
 			prefReduceMotion, prefDynamicColors, prefVisStyle, prefVisColors, prefVisIntensity, prefVisSensitivity,
-			prefLyricsSize, prefLyricsAlign, prefLyricsSmooth, prefRightPane, prefBalance} {
+			prefLyricsSize, prefLyricsAlign, prefLyricsSmooth, prefRightPane, prefBalance, prefCoverStyle} {
 			a.prefs.RemoveValue(key)
 		}
 		a.setPalette(paletteDark)

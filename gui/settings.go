@@ -121,6 +121,18 @@ func (s *settingsView) build() {
 		}
 	})
 	themeSel.Selected = a.theme.p.Name
+	coverNames := map[string]string{coverStyleCover: T("Cover art"), coverStyleVinyl: T("Vinyl record")}
+	coverSel := widget.NewSelect([]string{coverNames[coverStyleCover], coverNames[coverStyleVinyl]}, func(v string) {
+		style := coverStyleCover
+		if v == coverNames[coverStyleVinyl] {
+			style = coverStyleVinyl
+		}
+		a.prefs.SetString(prefCoverStyle, style)
+		if f, ok := a.views["player"].(*fullPlayer); ok {
+			f.applyCoverStyle()
+		}
+	})
+	coverSel.Selected = coverNames[a.coverStyle()]
 	toggle := func(key string, def bool, after func(bool)) *widget.Check {
 		c := widget.NewCheck("", func(on bool) {
 			a.prefs.SetBool(key, on)
@@ -148,6 +160,7 @@ func (s *settingsView) build() {
 		setRow(T("Theme"), "", themeSel),
 		setRow(T("Dynamic colors"), T("The colors of the whole window follow the cover of the playing track"), toggle(prefDynamicColors, true, func(bool) { a.followCover() })),
 		setRow(T("Now playing panel"), T("Shown on windows wider than 1180 px"), toggle(prefRightPane, true, func(bool) { a.win.Content().Refresh() })),
+		setRow(T("Player cover"), T("The player page shows the cover, or a record that turns while the track plays"), coverSel),
 	), a.customizeCard())
 
 	// Home and services.

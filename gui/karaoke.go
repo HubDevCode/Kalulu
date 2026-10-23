@@ -31,8 +31,12 @@ type kWord struct {
 // kLine is a laid-out lyric line.
 type kLine struct {
 	y, h  float32
+	w     float32 // widest row
 	start float64
 	words []*kWord
+	// emph eases to 1 while the line is sung and back to 0 after, so the
+	// highlight passes smoothly from one line to the next.
+	emph float64
 }
 
 // karaoke renders synced lyrics with per-word highlighting and smooth
@@ -56,6 +60,21 @@ type karaoke struct {
 	message  *canvas.Text
 	stop     chan struct{}
 	running  bool
+	// wanted is true between Start and Stop. Fyne destroys the renderer
+	// of a widget that stayed off screen for a while, which halts the
+	// frames; a new renderer starts them again while wanted.
+	wanted bool
+
+	// compact is the three-line ticker of the now playing panel: smaller
+	// centered text, the sung line in the middle with a glow behind it.
+	compact bool
+	glow    []*canvas.Rectangle // soft layers, widest first
+	glowY   float32
+	glowW   float32
+	// active, when set, pauses the frames while it reports false.
+	active func() bool
+	// outer receives the wheel in compact mode, so the panel scrolls.
+	outer fyne.Scrollable
 }
 
 func newKaraoke(a *App) *karaoke {
@@ -67,11 +86,38 @@ func newKaraoke(a *App) *karaoke {
 	return k
 }
 
+// newLyricTicker is the compact karaoke of the now playing panel.
+func newLyricTicker(a *App) *karaoke {
+	k := newKaraoke(a)
+	k.compact = true
+	for range 5 {
+		r := canvas.NewRectangle(color.Transparent)
+		r.Hide()
+		k.glow = append(k.glow, r)
+	}
+	k.message.TextSize = 13
+	return k
+}
+
+// anchor is where the sung line sits, as a share of the height.
+func (k *karaoke) anchor() float32 {
+	if k.compact {
+		return 0.5
+	}
+	return 0.38
+}
+
 func (k *karaoke) textSize() float32 {
+	if k.compact {
+		return 15
+	}
 	return float32(k.app.prefs.FloatWithFallback(prefLyricsSize, 26))
 }
 
 func (k *karaoke) centered() bool {
+	if k.compact {
+		return true
+	}
 	return k.app.prefs.StringWithFallback(prefLyricsAlign, "left") == "center"
 }
 
@@ -96,6 +142,12 @@ func (k *karaoke) SetPosition(pos float64) {
 }
 
 func (k *karaoke) CreateRenderer() fyne.WidgetRenderer {
+	k.mu.Lock()
+	wanted := k.wanted
+	k.mu.Unlock()
+	if wanted {
+		k.run()
+	}
 	return &karaokeRenderer{k: k}
 }
 
@@ -185,6 +237,9 @@ func (k *karaoke) relayout(width float32) {
 				k.objects = append(k.objects, kw.text)
 			}
 		}
+		for _, r := range rows {
+			kl.w = max(kl.w, r.w)
+		}
 		kl.h = float32(len(rows)) * lineH
 		y += kl.h + gap
 		k.layout = append(k.layout, kl)
@@ -218,6 +273,12 @@ func (k *karaoke) Tapped(ev *fyne.PointEvent) {
 }
 
 func (k *karaoke) Scrolled(ev *fyne.ScrollEvent) {
+	if k.compact {
+		if k.outer != nil {
+			k.outer.Scrolled(ev)
+		}
+		return
+	}
 	k.mu.Lock()
 	k.manualAt = time.Now()
 	k.target -= ev.Scrolled.DY
@@ -229,6 +290,14 @@ func (k *karaoke) Cursor() desktop.Cursor { return desktop.PointerCursor }
 
 // Start runs the animation while the view is visible.
 func (k *karaoke) Start() {
+	k.mu.Lock()
+	k.wanted = true
+	k.mu.Unlock()
+	k.run()
+}
+
+// run starts the frame loop unless it runs.
+func (k *karaoke) run() {
 	k.mu.Lock()
 	if k.running {
 		k.mu.Unlock()
@@ -247,7 +316,7 @@ func (k *karaoke) Start() {
 				return
 			case <-ticker.C:
 			}
-			if !k.app.winVisible.Load() {
+			if !k.app.winVisible.Load() || (k.active != nil && !k.active()) {
 				continue
 			}
 			runOnUI(k.animate)
@@ -257,6 +326,14 @@ func (k *karaoke) Start() {
 
 // Stop ends the animation.
 func (k *karaoke) Stop() {
+	k.mu.Lock()
+	k.wanted = false
+	k.mu.Unlock()
+	k.halt()
+}
+
+// halt stops the frame loop, keeping wanted.
+func (k *karaoke) halt() {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	if k.running {
@@ -281,27 +358,45 @@ func (k *karaoke) animate() {
 			}
 		}
 	}
-	follow := time.Since(k.manualAt) > 3*time.Second
+	follow := k.compact || time.Since(k.manualAt) > 3*time.Second
 	if cur >= 0 && follow {
 		l := k.layout[cur]
-		k.target = l.y + l.h/2 - k.height*0.38
+		k.target = l.y + l.h/2 - k.height*k.anchor()
 	} else if cur < 0 && follow && k.synced {
 		k.target = 0
+		if k.compact && len(k.layout) > 0 {
+			// Before the first line, it waits just below the middle.
+			k.target = -k.height * 0.25
+		}
 	}
 	smooth := float32(k.app.prefs.FloatWithFallback(prefLyricsSmooth, 0.16))
+	ease := 0.12
 	if k.app.reduceMotion() {
-		smooth = 1
+		smooth, ease = 1, 1
 	}
 	moved := math.Abs(float64(k.target-k.scroll)) > 0.5
 	if moved {
 		k.scroll += (k.target - k.scroll) * smooth
 	}
-	p := k.app.theme.p
-	changedLine := cur != k.current
+	p := currentPalette()
 	k.current = cur
+	focus := k.height * k.anchor()
 	for i, l := range k.layout {
+		want := 0.0
+		if i == cur {
+			want = 1
+		}
+		if l.emph != want {
+			l.emph += (want - l.emph) * ease
+			if math.Abs(want-l.emph) < 0.01 {
+				l.emph = want
+			}
+		}
 		top := l.y - k.scroll
 		visible := top+l.h > -40 && top < k.height+40
+		// Lines dim with their distance from the sung one, gradually.
+		dist := math.Abs(float64(top + l.h/2 - focus))
+		fade := k.fade(dist, i < cur)
 		for _, w := range l.words {
 			if visible {
 				w.text.Move(fyne.NewPos(w.x, w.y-k.scroll))
@@ -310,7 +405,7 @@ func (k *karaoke) animate() {
 				w.text.Hide()
 				continue
 			}
-			c := k.wordColor(i, cur, w, pos, p)
+			c := k.wordColor(l, w, pos, p, fade)
 			if c != w.text.Color {
 				w.text.Color = c
 				w.text.Refresh()
@@ -319,36 +414,91 @@ func (k *karaoke) animate() {
 			}
 		}
 	}
-	_ = changedLine
+	k.placeGlow(cur, p)
+}
+
+// fade is how far toward the background a line that is not sung goes, for
+// its distance in points from the sung line.
+func (k *karaoke) fade(dist float64, past bool) float64 {
+	if !k.synced {
+		return 0
+	}
+	span := math.Max(80, float64(k.height)*0.6)
+	near, far := 0.32, 0.86
+	if k.compact {
+		span, near, far = math.Max(40, float64(k.height)*0.5), 0.5, 0.8
+	}
+	f := near + (far-near)*smoothstep(dist/span)
+	if past {
+		f = math.Min(0.92, f+0.06)
+	}
+	return f
 }
 
 // wordColor is the color of a word for the playhead: sung words take the
-// accent, the word being sung blends into it, lines far from the current
-// one fade.
-func (k *karaoke) wordColor(line, cur int, w *kWord, pos float64, p Palette) color.Color {
+// accent, the word being sung blends into it, and the other lines blend
+// into the background by fade. The colors are opaque: a text with alpha
+// drew unevenly.
+func (k *karaoke) wordColor(l *kLine, w *kWord, pos float64, p Palette, fade float64) color.Color {
 	if !k.synced {
 		return p.FG
 	}
-	if line == cur {
-		switch {
-		case pos >= w.end:
-			return p.Accent
-		case pos <= w.start:
-			return withAlpha(p.FG, 0xd0)
-		default:
-			t := (pos - w.start) / math.Max(0.05, w.end-w.start)
-			return mix(withAlpha(p.FG, 0xd0), p.Accent, math.Min(1, t*1.6))
+	bg := mix(p.BG, p.Surface, 0.5)
+	idle := mix(p.FG, bg, fade)
+	if l.emph == 0 {
+		return idle
+	}
+	unsung := mix(p.FG, bg, 0.12)
+	var sung color.NRGBA
+	switch {
+	case pos >= w.end:
+		sung = p.Accent
+	case pos <= w.start:
+		sung = unsung
+	default:
+		t := (pos - w.start) / math.Max(0.05, w.end-w.start)
+		sung = mix(unsung, p.Accent, math.Min(1, t*1.6))
+	}
+	if k.compact && pos >= w.end {
+		// In the ticker the sung words stay bright, the glow carries the
+		// accent.
+		sung = mix(p.FG, p.Accent, 0.35)
+	}
+	return mix(idle, sung, smoothstep(l.emph))
+}
+
+// placeGlow moves the soft light behind the sung line of the ticker.
+func (k *karaoke) placeGlow(cur int, p Palette) {
+	if len(k.glow) == 0 {
+		return
+	}
+	if cur < 0 || !k.synced {
+		for _, r := range k.glow {
+			r.Hide()
 		}
+		return
 	}
-	d := line - cur
-	if d < 0 {
-		d = -d
+	l := k.layout[cur]
+	y := l.y + l.h/2 - k.scroll
+	w := min(k.width, l.w+16)
+	if k.glow[0].Hidden {
+		k.glowY, k.glowW = y, w
 	}
-	alpha := []uint8{0xff, 0x8c, 0x60, 0x48}[min(3, d)]
-	if line < cur {
-		alpha = alpha * 3 / 4
+	k.glowY += (y - k.glowY) * 0.2
+	k.glowW += (w - k.glowW) * 0.2
+	// Stacked translucent layers make a soft light that is brightest in
+	// the middle of the line.
+	fill := withAlpha(p.Accent, 0x10)
+	for i, r := range k.glow {
+		grow := float32(len(k.glow)-1-i) * 8
+		gw, gh := min(k.width, k.glowW+grow*2), l.h+6+grow
+		r.FillColor = fill
+		r.CornerRadius = gh / 2
+		r.Move(fyne.NewPos((k.width-gw)/2, k.glowY-gh/2))
+		r.Resize(fyne.NewSize(gw, gh))
+		r.Show()
+		r.Refresh()
 	}
-	return withAlpha(p.FG, alpha)
 }
 
 type karaokeRenderer struct{ k *karaoke }
@@ -366,7 +516,12 @@ func (r *karaokeRenderer) Layout(size fyne.Size) {
 	k.animate()
 }
 
-func (r *karaokeRenderer) MinSize() fyne.Size { return fyne.NewSize(200, 160) }
+func (r *karaokeRenderer) MinSize() fyne.Size {
+	if r.k.compact {
+		return fyne.NewSize(120, 60)
+	}
+	return fyne.NewSize(200, 160)
+}
 
 func (r *karaokeRenderer) Refresh() {
 	k := r.k
@@ -381,11 +536,15 @@ func (r *karaokeRenderer) Objects() []fyne.CanvasObject {
 	k := r.k
 	k.mu.Lock()
 	defer k.mu.Unlock()
-	objs := append([]fyne.CanvasObject{}, k.objects...)
+	var objs []fyne.CanvasObject
+	for _, r := range k.glow {
+		objs = append(objs, r)
+	}
+	objs = append(objs, k.objects...)
 	if len(k.lines) == 0 {
 		objs = append(objs, k.message)
 	}
 	return objs
 }
 
-func (r *karaokeRenderer) Destroy() { r.k.Stop() }
+func (r *karaokeRenderer) Destroy() { r.k.halt() }

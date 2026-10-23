@@ -16,7 +16,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
@@ -77,6 +76,9 @@ type App struct {
 	navCompactHide []fyne.CanvasObject
 	compactNav     bool
 	navBox         *fyne.Container
+	navCards       []fyne.CanvasObject
+	navSources     *widget.Label
+	navExtra       []*navItem // footer rows outside a.nav
 	views          map[string]view
 	current        string
 	content        *fyne.Container
@@ -105,6 +107,8 @@ type App struct {
 	shell      *shellLayout
 	bottom     fyne.CanvasObject
 	restarting bool
+	// windowed is the window size before full screen, restored after.
+	windowed   fyne.Size
 	lastMix    time.Time
 	mixHistory []mixRecord
 	auto       autoplay
@@ -354,6 +358,9 @@ func (a *App) setNavCompact(compact bool) {
 	for _, n := range a.nav {
 		n.setCompact(compact)
 	}
+	for _, n := range a.navExtra {
+		n.setCompact(compact)
+	}
 	for _, o := range a.navCompactHide {
 		if compact {
 			o.Hide()
@@ -361,66 +368,6 @@ func (a *App) setNavCompact(compact bool) {
 			o.Show()
 		}
 	}
-}
-
-func (a *App) buildSidebar() fyne.CanvasObject {
-	logo := canvas.NewImageFromResource(LogoResource)
-	logo.FillMode = canvas.ImageFillContain
-	logo.SetMinSize(fyne.NewSize(30, 30))
-	title := boldLabel("Kalulu")
-	title.SizeName = theme.SizeNameSubHeadingText
-	menuBtn := iconButton(theme.MenuIcon(), nil)
-	menuBtn.OnTapped = func() {
-		pos := fyne.CurrentApp().Driver().AbsolutePositionForObject(menuBtn)
-		widget.ShowPopUpMenuAtPosition(a.appMenu(), a.win.Canvas(), pos.Add(fyne.NewPos(0, menuBtn.Size().Height)))
-	}
-	logoTap := newTapArea(func() {
-		if !a.navCompact() {
-			return
-		}
-		pos := fyne.CurrentApp().Driver().AbsolutePositionForObject(logo)
-		widget.ShowPopUpMenuAtPosition(a.appMenu(), a.win.Canvas(), pos.Add(fyne.NewPos(0, 36)))
-	})
-	header := padded(12, 4, 8, 10, container.NewBorder(nil, nil, container.NewHBox(container.NewStack(logo, logoTap), title), menuBtn))
-
-	item := func(key string, res fyne.Resource, text string) *navItem {
-		n := newNavItem(key, res, text, func() { a.show(key) })
-		a.nav[key] = n
-		return n
-	}
-	discoverTitle, playerTitle, libraryTitle := sectionTitle(T("Discover")), sectionTitle(T("Your music")), sectionTitle(T("Library"))
-	a.navBox = container.NewVBox(
-		discoverTitle,
-		item("home", theme.HomeIcon(), T("Home")),
-		item("search", theme.SearchIcon(), T("Search")),
-		item("radio", iconRadio, T("Radio")),
-		item("podcasts", iconPodcast, T("Podcasts")),
-		fixed(0, 6),
-		playerTitle,
-		item("queue", iconQueue, T("Queue")),
-		item("dj", iconDJ, "DJ Mixer"),
-		item("eq", iconEqualizer, T("Equalizer")),
-		item("history", theme.HistoryIcon(), T("History")),
-		item("share", iconGroup, T("Together")),
-		fixed(0, 6),
-		libraryTitle,
-	)
-	providersLoading := captionLabel(T("Loading sources…"))
-	a.navBox.Add(padded(0, 0, 0, 10, providersLoading))
-
-	open := container.NewVBox(
-		item("settings", theme.SettingsIcon(), T("Settings")),
-	)
-	quick := container.NewGridWithColumns(3,
-		widget.NewButtonWithIcon("", theme.FileAudioIcon(), a.openFiles),
-		widget.NewButtonWithIcon("", theme.FolderOpenIcon(), a.openFolder),
-		widget.NewButtonWithIcon("", iconLink, a.openURL),
-	)
-	bottom := container.NewVBox(open, padded(4, 6, 10, 6, quick))
-	scroll := container.NewVScroll(padded(0, 8, 0, 8, a.navBox))
-	bg := tRect(roleSurface)
-	a.navCompactHide = []fyne.CanvasObject{title, menuBtn, quick, discoverTitle, playerTitle, libraryTitle, providersLoading}
-	return container.NewStack(bg, container.NewBorder(header, bottom, nil, nil, scroll))
 }
 
 // setProviders fills the Library section of the sidebar.
@@ -431,6 +378,7 @@ func (a *App) setProviders(list []ipc.ProviderInfo) {
 	// Drop the "Loading" label, the last object.
 	objects := a.navBox.Objects
 	a.navBox.Objects = objects[:len(objects)-1]
+	shown := 0
 	for _, p := range list {
 		p := p
 		// Radio and podcasts have their own pages in Discover.
@@ -443,7 +391,9 @@ func (a *App) setProviders(list []ipc.ProviderInfo) {
 		a.nav[key] = n
 		n.setCompact(a.compactNav)
 		a.navBox.Add(n)
+		shown++
 	}
+	a.setSidebarSources(shown)
 	a.navBox.Refresh()
 	a.applyNavVisibility()
 	if a.splash != nil {
@@ -1067,11 +1017,36 @@ func (a *App) setImmersive(on bool) {
 		return
 	}
 	a.immersive = on
-	a.win.SetFullScreen(on)
-	if on {
-		a.bottom.Hide()
-	} else {
-		a.bottom.Show()
+	if f, ok := a.views["player"].(*fullPlayer); ok {
+		f.exitFull.Hidden = !on
+		f.exitFull.Refresh()
 	}
+	if on {
+		a.windowed = a.win.Canvas().Size()
+		a.bottom.Hide()
+		a.win.SetFullScreen(true)
+		a.win.Content().Refresh()
+		return
+	}
+	a.bottom.Show()
+	a.win.SetFullScreen(false)
+	// The window manager gives the window back its size a moment later;
+	// until then the canvas kept the full screen size and the edges were
+	// cut. Resize to the old size and lay out again once it settles.
+	size := a.windowed
+	go func() {
+		for _, wait := range []time.Duration{60, 250, 600} {
+			time.Sleep(wait * time.Millisecond)
+			runOnUI(func() {
+				if a.immersive {
+					return
+				}
+				if size.Width > 0 && size.Height > 0 {
+					a.win.Resize(size)
+				}
+				a.win.Content().Refresh()
+			})
+		}
+	}()
 	a.win.Content().Refresh()
 }

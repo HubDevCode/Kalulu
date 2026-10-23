@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <b>Version 2.5.3</b> · formerly GuiAmp · a graphical fork of <a href="https://github.com/bjarneo/cliamp">cliamp</a> · GPL-3.0
+  <b>Version 2.5.4</b> · formerly GuiAmp · a graphical fork of <a href="https://github.com/bjarneo/cliamp">cliamp</a> · GPL-3.0
 </p>
 
 ![The Kalulu Home](docs/images/kalulu-home.png)
@@ -19,13 +19,29 @@
 
 Kalulu puts a modern window on the engine of [cliamp](https://github.com/bjarneo/cliamp), a fast and well-tested terminal player. It needs no account: Home suggests YouTube Music for your country, and every card plays with one click. Services you already use (Navidrome, Jellyfin, Plex, Spotify, Tidal, Qobuz…) show up in the Library.
 
-![The player with synced lyrics](docs/images/kalulu-player.png)
+The whole window takes its colors from the cover of the playing song: the sidebar, the panels, the search bar, the record on the player page and the glow behind the lyrics all change with every track, always with readable text.
+
+![The player with the vinyl record and synced lyrics](docs/images/kalulu-player.png)
+
+## What's new in 2.5.4
+
+A new look, drawn from the Kalulu mobile design and rebuilt for the desktop:
+
+- **Sidebar**: a profile card with the KALULU wordmark in Ruslan Display, the sections in bordered cards, What's new and Settings rows, and a plan card with the quick open buttons.
+- **Search**: a search bar in the accent color with Cancel, and the moods and genres on a sheet of colored tiles, each with a tilted album sleeve.
+- **Vinyl player**: Settings → Personalization → Player cover shows the cover or a vinyl record with the cover as its label. The record turns while the song plays, and the tonearm lowers on play and lifts on pause.
+- **Album cards** show the cover with its record sliding out on the right.
+- **Now playing panel**: three lines of synced lyrics with a glow behind the sung one, the whole queue in a scrolling list, and the visualizer fixed at the bottom.
+- **Full screen** button at the right end of the player bar; leaving full screen no longer cuts the window edges.
+- Smoother lyrics: lines fade gradually with their distance from the sung one.
+
+![Search with the genre tiles](docs/images/kalulu-search.png)
 
 ## Features
 
 **Discover and listen**
 - Modular Home: mixes made for you from what you listen to, YouTube Music, charts, moods and genres, and the radio and podcasts of your country. You pick the sections and their order.
-- Search with suggestions as you type: songs, artists, albums, videos and playlists.
+- Search with suggestions as you type: songs, artists, albums, videos and playlists. With an empty field, the moods and genres of YouTube Music show as colored tiles.
 - Autoplay: when the queue ends, similar songs keep playing.
 - Radio from all over the world ([Radio Browser](https://www.radio-browser.info)) and the Apple podcast charts.
 - Local files, folders, URLs, M3U and PLS playlists and feeds. Just drop them on the window.
@@ -42,12 +58,16 @@ Kalulu puts a modern window on the engine of [cliamp](https://github.com/bjarneo
 - Presets Smooth, Beat Match, Long Mix, Quick Mix and Manual, with length, intensity and a preview.
 
 **Lyrics**
-- Karaoke-style lyrics synced word by word, with smooth animation and full screen.
+- Karaoke-style lyrics synced word by word, with smooth animation and full screen. The lines fade gradually with their distance from the sung one.
+- The now playing panel follows the song in three lines: the one before, the sung one with a glow, and the next.
 - Nine free sources asked at once, with no account: LyricsPlus, lrc.red and Paxsenix (Apple Music lyrics timed per word), LRCLIB, BetterLyrics Unison, NetEase, QQ Music, Kugou and lyrics.ovh. Kalulu keeps the best answer and caches it.
 - The gear under the lyrics looks them up again, picks the source and sets the offset.
 
 **Interface**
 - The window colors follow the cover of the playing track, always with readable contrast.
+- The player page shows the cover, or a vinyl record with the cover as its label that turns while the track plays.
+- Album cards show the cover with its record beside it.
+- The now playing panel keeps the details and lyrics at the top and the visualizer at the bottom, with the whole queue scrolling between them.
 - Visualizer with the NCS sphere that pulses on the beat, plus bars, mirror, radial and more.
 - Density, text size, sidebar and reduced motion are all yours to set.
 - Tray icon: closing the window keeps the music playing.
@@ -66,6 +86,8 @@ Kalulu puts a modern window on the engine of [cliamp](https://github.com/bjarneo
 
 **Updates**
 - Checks the releases of this repository every time it starts and shows a panel when a new version is out. It downloads the AppImage or the Windows installer and installs it only when it matches its `SHA256SUMS`.
+
+![An artist page with the album cards](docs/images/kalulu-artist.png)
 
 ![Equalizer and audio](docs/images/kalulu-equalizer.png)
 
@@ -187,3 +209,5 @@ Kalulu is a fork of [cliamp](https://github.com/bjarneo/cliamp) by Bjarne Øverl
 Kalulu is free software: you can redistribute it and modify it under the terms of the [GNU General Public License](LICENSE), version 3 or, at your option, any later version.
 
 Kalulu contains the code of cliamp, © Bjarne Øverli, released under the MIT license. As that license requires, its original notice is kept in [LICENSES/MIT-cliamp.txt](LICENSES/MIT-cliamp.txt).
+
+The KALULU wordmark uses [Ruslan Display](https://fonts.google.com/specimen/Ruslan+Display), © Oleg Snarsky, Denis Masharov and Vladimir Rabdu, under the SIL Open Font License 1.1, kept in [LICENSES/OFL-RuslanDisplay.txt](LICENSES/OFL-RuslanDisplay.txt).

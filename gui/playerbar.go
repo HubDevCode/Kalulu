@@ -36,15 +36,15 @@ type playerBar struct {
 	seeking  bool
 	seekedAt time.Time
 
-	volume    *widget.Slider
-	volIcon   *widget.Button
-	volLabel  *widget.Label
-	volDrag   time.Time
-	preMute   float64
-	speed     *widget.Button
-	panelBtn  *widget.Button
-	lyricsBtn *widget.Button
-	eqBtn     *widget.Button
+	volume   *widget.Slider
+	volIcon  *widget.Button
+	volLabel *widget.Label
+	volDrag  time.Time
+	preMute  float64
+	speed    *widget.Button
+	panelBtn *widget.Button
+	fullBtn  *widget.Button
+	eqBtn    *widget.Button
 
 	lastTrack string
 	extras    *fyne.Container
@@ -90,6 +90,8 @@ func newPlayerBar(a *App) *playerBar {
 	b := &playerBar{app: a, preMute: 0}
 
 	b.art = newArtView(a, 56, 8)
+	// A video thumbnail is wide: crop it to the square like the covers.
+	b.art.image.FillMode = canvas.ImageFillCover
 	b.art.onTap = func() { a.show("player") }
 	b.title = trunc(boldLabel(T("Nothing playing")))
 	b.artist = trunc(captionLabel("Pick something from the library"))
@@ -138,12 +140,16 @@ func newPlayerBar(a *App) *playerBar {
 	b.volLabel.Alignment = fyne.TextAlignTrailing
 	b.speed = widget.NewButton("1.00×", b.showSpeedMenu)
 	b.speed.Importance = widget.LowImportance
-	b.lyricsBtn = newToggleButton(iconLyrics, func() { a.show("player") })
+	// Full screen opens the player page alone, over the whole screen.
+	b.fullBtn = iconButton(theme.ViewFullScreenIcon(), func() {
+		a.show("player")
+		a.setImmersive(true)
+	})
 	b.eqBtn = newToggleButton(iconEqualizer, func() { a.show("eq") })
 	b.panelBtn = newToggleButton(iconSidebar, a.toggleRightPane)
-	b.extras = container.NewHBox(b.speed, b.lyricsBtn, b.eqBtn, b.panelBtn)
+	b.extras = container.NewHBox(b.speed, b.eqBtn, b.panelBtn)
 	right := container.NewVBox(spacer(), container.NewHBox(spacer(), b.extras, b.volIcon,
-		fixed(100, 0, container.NewVBox(spacer(), b.volume, spacer())), fixed(48, 0, container.NewVBox(spacer(), b.volLabel, spacer()))), spacer())
+		fixed(100, 0, container.NewVBox(spacer(), b.volume, spacer())), fixed(48, 0, container.NewVBox(spacer(), b.volLabel, spacer())), b.fullBtn), spacer())
 
 	bar := container.New(&barLayout{b: b}, left, padded(0, 12, 0, 12, center), right)
 	bg := tRect(roleSurface)
@@ -266,7 +272,6 @@ func (b *playerBar) update(s ipc.RuntimeSnapshot) {
 		b.speed.SetText(text)
 	}
 	setActive(b.panelBtn, b.app.prefs.BoolWithFallback(prefRightPane, true))
-	setActive(b.lyricsBtn, b.app.current == "player")
 	setActive(b.eqBtn, b.app.current == "eq" || (s.EQPreset != "" && s.EQPreset != "Flat"))
 }
 
